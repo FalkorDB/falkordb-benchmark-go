@@ -1,4 +1,4 @@
-module github.com/RedisGraph/redisgraph-benchmark-go
+module github.com/FalkorDB/falkordb-benchmark-go
 
 go 1.17
 
