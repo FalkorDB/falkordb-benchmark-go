@@ -5,6 +5,7 @@
 *.so
 *.dylib
 falkordb-benchmark
+dataset.rdb
 
 # Test binary, built with `go test -c`
 *.test

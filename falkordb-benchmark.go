@@ -42,11 +42,20 @@ func main() {
 		os.Exit(0)
 	}
 
-	log.Printf("Running in Verbose Mode: %b.\n", verbose)
+	log.Printf("Running in Verbose Mode: %t.\n", *verbose)
 
-	totalQueries := len(benchmarkQueries) + len(benchmarkQueriesRO)
+	if DownloadDataset(yamlConfig.DBConfig.Dataset) != nil {
+		log.Fatal("Could not download dataset")
+	}
+
+	err = RunFalkorDB()
+	if err != nil {
+		log.Fatalf("Could not start Falkor in time %s", err)
+	}
+
+	totalQueries := len(yamlConfig.Parameters.Queries) + len(yamlConfig.Parameters.RoQueries)
 	if totalQueries < 1 {
-		log.Fatalf("You need to specify at least a query with the -query parameter or -query-ro. For example: -query=\"CREATE (n)\"")
+		log.Fatal("You need to specify at least a query with the -query parameter or -query-ro. For example: -query=\"CREATE (n)\"")
 	}
 
 	RandomSeed := *yamlConfig.Parameters.RandomSeed
@@ -123,17 +132,8 @@ func main() {
 
 	}
 
-	readAndWriteQueries := append(benchmarkQueries, benchmarkQueriesRO...)
-
-	for i := 0; i < len(queries); i++ {
-		queryIsReadOnly[i] = false
-		// read-only queries are located after the read/write ones in queries,
-		// so we start on len(benchmarkQueries) to tag them
-		if i >= len(benchmarkQueries) {
-			queryIsReadOnly[i] = true
-		}
-	}
-	totalDifferentCommands, cdf := prepareCommandsDistribution(readAndWriteQueries, queries, cmdRates)
+	allQueries, queryIsRO, queryRates := convertQueries(yamlConfig.Parameters.Queries, yamlConfig.Parameters.RoQueries)
+	totalDifferentCommands, cdf := prepareCommandsDistribution(allQueries, queryRates)
 
 	createRequiredGlobalStructs(totalDifferentCommands)
 
@@ -151,7 +151,6 @@ func main() {
 	c1 := make(chan os.Signal, 1)
 	signal.Notify(c1, os.Interrupt)
 
-	log.Printf("Trying to extract FalkorDB version info\n")
 	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
@@ -182,10 +181,10 @@ func main() {
 			clientTotalCmds = samplesPerClientRemainder + samplesPerClient
 		}
 		cmdStartPos := uint64(clientId) * samplesPerClient
-		go ingestionRoutine(&graphs[clientId], *yamlConfig.ContinueOnError, queries, queryIsReadOnly, cdf, *yamlConfig.Parameters.RandomIntMin, randLimit, clientTotalCmds, *loop, *verbose, &wg, useRateLimiter, rateLimiter, graphDatapointsChann, dataReplacementEnabled, replacementArr, cmdStartPos)
+		go ingestionRoutine(&graphs[clientId], *yamlConfig.ContinueOnError, allQueries, queryIsRO, cdf, *yamlConfig.Parameters.RandomIntMin, randLimit, clientTotalCmds, *loop, *verbose, &wg, useRateLimiter, rateLimiter, graphDatapointsChann, dataReplacementEnabled, replacementArr, cmdStartPos)
 	}
 
-	// enter the update loopupdateCLIupdateCLI
+	// enter the update loopUpdateCLIUpdateCLI
 	updateCLI(startTime, tick, c, yamlConfig.Parameters.NumRequests, *loop)
 
 	endTime := time.Now()
@@ -202,19 +201,19 @@ func main() {
 	testResult.FillDurationInfo(startTime, endTime, duration)
 	testResult.BenchmarkFullyRun = totalCommands == yamlConfig.Parameters.NumRequests
 	testResult.IssuedCommands = totalCommands
-	overallGraphInternalLatencies, internalLatencyMap := GetOverallLatencies(queries, serverSide_PerQuery_GraphInternalTime_OverallLatencies, serverSide_AllQueries_GraphInternalTime_OverallLatencies)
-	overallClientLatencies, clientLatencyMap := GetOverallLatencies(queries, clientSide_PerQuery_OverallLatencies, clientSide_AllQueries_OverallLatencies)
+	overallGraphInternalLatencies, internalLatencyMap := GetOverallLatencies(allQueries, serverSidePerQueryGraphInternalTimeOverallLatencies, serverSideAllQueriesGraphInternalTimeOverallLatencies)
+	overallClientLatencies, clientLatencyMap := GetOverallLatencies(allQueries, clientSidePerQueryOverallLatencies, clientSideAllQueriesOverallLatencies)
 	relativeLatencyDiff, absoluteLatencyDiff := GenerateInternalExternalRatioLatencies(internalLatencyMap, clientLatencyMap)
 	testResult.OverallClientLatencies = overallClientLatencies
 	testResult.OverallGraphInternalLatencies = overallGraphInternalLatencies
 	testResult.AbsoluteInternalExternalLatencyDiff = absoluteLatencyDiff
 	testResult.RelativeInternalExternalLatencyDiff = relativeLatencyDiff
-	testResult.OverallQueryRates = GetOverallRatesMap(duration, queries, clientSide_PerQuery_OverallLatencies, clientSide_AllQueries_OverallLatencies)
+	testResult.OverallQueryRates = GetOverallRatesMap(duration, allQueries, clientSidePerQueryOverallLatencies, clientSideAllQueriesOverallLatencies)
 	testResult.DBSpecificConfigs = GetDBConfigsMap(falkorDBVersion)
-	testResult.Totals = GetTotalsMap(queries, clientSide_PerQuery_OverallLatencies, clientSide_AllQueries_OverallLatencies, errorsPerQuery, totalNodesCreatedPerQuery, totalNodesDeletedPerQuery, totalLabelsAddedPerQuery, totalPropertiesSetPerQuery, totalRelationshipsCreatedPerQuery, totalRelationshipsDeletedPerQuery)
+	testResult.Totals = GetTotalsMap(allQueries, clientSidePerQueryOverallLatencies, clientSideAllQueriesOverallLatencies, errorsPerQuery, totalNodesCreatedPerQuery, totalNodesDeletedPerQuery, totalLabelsAddedPerQuery, totalPropertiesSetPerQuery, totalRelationshipsCreatedPerQuery, totalRelationshipsDeletedPerQuery)
 
 	// final merge of pending stats
-	printFinalSummary(queries, totalCommands, duration)
+	printFinalSummary(allQueries, totalCommands, duration)
 
 	saveJsonResult(testResult, yamlConfig.JsonOutputFile)
 }

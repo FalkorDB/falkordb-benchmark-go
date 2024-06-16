@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+type Query struct {
+	Query string  `yaml:"query"`
+	Ratio float64 `yaml:"ratio"`
+}
+
 type YamlConfig struct {
 	Name            *string `yaml:"name"`
 	Description     string  `yaml:"description,omitempty"`
@@ -24,20 +29,14 @@ type YamlConfig struct {
 		TlsCaCertFile          string   `yaml:"tls_ca_cert_file"`
 	} `yaml:"db_config"`
 	Parameters struct {
-		NumClients        uint64 `yaml:"num_clients"`
-		NumRequests       uint64 `yaml:"num_requests"`
-		RequestsPerSecond uint64 `yaml:"rps"`
-		RandomIntMin      *int64 `yaml:"random_int_min"`
-		RandomIntMax      *int64 `yaml:"random_int_max"`
-		RandomSeed        *int64 `yaml:"random_seed"`
-		Queries           []struct {
-			Query string   `yaml:"query"`
-			Ratio *float64 `yaml:"ratio"`
-		} `yaml:"queries,flow"`
-		RoQueries []struct {
-			Query string   `yaml:"query"`
-			Ratio *float64 `yaml:"ratio"`
-		} `yaml:"ro_queries,flow"`
+		NumClients        uint64  `yaml:"num_clients"`
+		NumRequests       uint64  `yaml:"num_requests"`
+		RequestsPerSecond uint64  `yaml:"rps"`
+		RandomIntMin      *int64  `yaml:"random_int_min"`
+		RandomIntMax      *int64  `yaml:"random_int_max"`
+		RandomSeed        *int64  `yaml:"random_seed"`
+		Queries           []Query `yaml:"queries,flow"`
+		RoQueries         []Query `yaml:"ro_queries,flow"`
 	} `yaml:"parameters"`
 }
 
@@ -117,4 +116,22 @@ func parseYaml(yamlFile string) (yamlConfig YamlConfig, err error) {
 	}
 
 	return
+}
+
+func convertQueries(
+	queries []Query, roQueries []Query) (allQueries []string, queryIsRO []bool, queryRates []float64) {
+
+	for _, query := range queries {
+		allQueries = append(allQueries, query.Query)
+		queryIsRO = append(queryIsRO, false)
+		queryRates = append(queryRates, query.Ratio)
+	}
+
+	for _, query := range roQueries {
+		allQueries = append(allQueries, query.Query)
+		queryIsRO = append(queryIsRO, true)
+		queryRates = append(queryRates, query.Ratio)
+	}
+
+	return allQueries, queryIsRO, queryRates
 }

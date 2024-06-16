@@ -101,11 +101,11 @@ func processGraphDatapointsChannel(graphStatsChann chan GraphQueryDatapoint, c c
 				cmdPos := dp.CmdPos
 				clientDurationMicros := dp.ClientDurationMicros
 				instantMutex.Lock()
-				clientSide_PerQuery_OverallLatencies[cmdPos].RecordValue(clientDurationMicros)
-				clientSide_AllQueries_OverallLatencies.RecordValue(clientDurationMicros)
+				clientSidePerQueryOverallLatencies[cmdPos].RecordValue(clientDurationMicros)
+				clientSideAllQueriesOverallLatencies.RecordValue(clientDurationMicros)
 				graphInternalDurationMicros := dp.GraphInternalDurationMicros
-				serverSide_PerQuery_GraphInternalTime_OverallLatencies[cmdPos].RecordValue(graphInternalDurationMicros)
-				serverSide_AllQueries_GraphInternalTime_OverallLatencies.RecordValue(graphInternalDurationMicros)
+				serverSidePerQueryGraphInternalTimeOverallLatencies[cmdPos].RecordValue(graphInternalDurationMicros)
+				serverSideAllQueriesGraphInternalTimeOverallLatencies.RecordValue(graphInternalDurationMicros)
 				instantMutex.Unlock()
 				// Only needs to be atomic due to CLI print
 				atomic.AddUint64(&totalCommands, uint64(1))
@@ -134,8 +134,8 @@ func processGraphDatapointsChannel(graphStatsChann chan GraphQueryDatapoint, c c
 				}
 
 				instantMutex.Lock()
-				clientSide_AllQueries_InstantLatencies.RecordValue(clientDurationMicros)
-				serverSide_AllQueries_GraphInternalTime_InstantLatencies.RecordValue(graphInternalDurationMicros)
+				clientSideAllQueriesInstantLatencies.RecordValue(clientDurationMicros)
+				serverSideAllQueriesGraphInternalTimeInstantLatencies.RecordValue(graphInternalDurationMicros)
 				instantMutex.Unlock()
 
 				totalProcessedCommands++

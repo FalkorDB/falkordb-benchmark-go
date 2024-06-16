@@ -9,17 +9,6 @@ import (
 	"time"
 )
 
-type arrayStringParameters []string
-
-func (i *arrayStringParameters) String() string {
-	return "my string representation"
-}
-
-func (i *arrayStringParameters) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
 func printFinalSummary(queries []string, totalMessages uint64, duration time.Duration) {
 	writer := os.Stdout
 	messageRate := float64(totalMessages) / duration.Seconds()
@@ -31,8 +20,8 @@ func printFinalSummary(queries []string, totalMessages uint64, duration time.Dur
 	fmt.Printf("Total Errors %d ( %3.3f %%)\n", totalErrors, float64(totalErrors/totalCommands*100.0))
 	fmt.Printf("Throughput summary: %.0f requests per second\n", messageRate)
 	renderGraphResultSetTable(queries, writer, "## Overall RedisGraph resultset stats table\n")
-	renderGraphInternalExecutionTimeTable(queries, writer, "## Overall RedisGraph Internal Execution Time summary table\n", serverSide_PerQuery_GraphInternalTime_OverallLatencies, serverSide_AllQueries_GraphInternalTime_OverallLatencies)
-	renderTable(queries, writer, "## Overall Client Latency summary table\n", true, true, errorsPerQuery, duration, clientSide_PerQuery_OverallLatencies, clientSide_AllQueries_OverallLatencies)
+	renderGraphInternalExecutionTimeTable(queries, writer, "## Overall RedisGraph Internal Execution Time summary table\n", serverSidePerQueryGraphInternalTimeOverallLatencies, serverSideAllQueriesGraphInternalTimeOverallLatencies)
+	renderTable(queries, writer, "## Overall Client Latency summary table\n", true, true, errorsPerQuery, duration, clientSidePerQueryOverallLatencies, clientSideAllQueriesOverallLatencies)
 }
 
 func renderTable(queries []string, writer *os.File, tableTitle string, includeCalls bool, includeErrors bool, errorSlice []uint64, duration time.Duration, detailedHistogram []*hdrhistogram.Histogram, overallHistogram *hdrhistogram.Histogram) {
@@ -179,10 +168,10 @@ func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, message
 				errorPercent := float64(currentErrs) / float64(currentCmds) * 100.0
 
 				instantHistogramsResetMutex.Lock()
-				p50 := float64(clientSide_AllQueries_OverallLatencies.ValueAtQuantile(50.0)) / 1000.0
-				p50RunTimeGraph := float64(serverSide_AllQueries_GraphInternalTime_OverallLatencies.ValueAtQuantile(50.0)) / 1000.0
-				instantP50 := float64(clientSide_AllQueries_InstantLatencies.ValueAtQuantile(50.0)) / 1000.0
-				instantP50RunTimeGraph := float64(serverSide_AllQueries_GraphInternalTime_InstantLatencies.ValueAtQuantile(50.0)) / 1000.0
+				p50 := float64(clientSideAllQueriesOverallLatencies.ValueAtQuantile(50.0)) / 1000.0
+				p50RunTimeGraph := float64(serverSideAllQueriesGraphInternalTimeOverallLatencies.ValueAtQuantile(50.0)) / 1000.0
+				instantP50 := float64(clientSideAllQueriesInstantLatencies.ValueAtQuantile(50.0)) / 1000.0
+				instantP50RunTimeGraph := float64(serverSideAllQueriesGraphInternalTimeInstantLatencies.ValueAtQuantile(50.0)) / 1000.0
 				instantHistogramsResetMutex.Unlock()
 				if currentCmds != 0 {
 					messageRateTs = append(messageRateTs, messageRate)
