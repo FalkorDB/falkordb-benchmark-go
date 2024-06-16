@@ -3,18 +3,17 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	rg "github.com/RedisGraph/redisgraph-go"
-	"github.com/gomodule/redigo/redis"
-	"io/ioutil"
+	"github.com/FalkorDB/falkordb-go"
 	"log"
+	"os"
 )
 
-func getStandaloneConn(graphName, network, addr string, password string, tlsCaCertFile string) (graph rg.Graph, conn redis.Conn) {
+func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile string) (graph *falkordb.Graph, conn *falkordb.FalkorDB) {
 
 	var err error
 	if tlsCaCertFile != "" {
 		// Load CA cert
-		caCert, err := ioutil.ReadFile(tlsCaCertFile)
+		caCert, err := os.ReadFile(tlsCaCertFile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -22,7 +21,8 @@ func getStandaloneConn(graphName, network, addr string, password string, tlsCaCe
 		caCertPool.AppendCertsFromPEM(caCert)
 
 		clientTLSConfig := &tls.Config{
-			RootCAs: caCertPool,
+			RootCAs:            caCertPool,
+			InsecureSkipVerify: true,
 		}
 		// InsecureSkipVerify controls whether a client verifies the
 		// server's certificate chain and host name.
@@ -30,30 +30,36 @@ func getStandaloneConn(graphName, network, addr string, password string, tlsCaCe
 		// presented by the server and any host name in that certificate.
 		// In this mode, TLS is susceptible to man-in-the-middle attacks.
 		// This should be used only for testing.
-		clientTLSConfig.InsecureSkipVerify = true
 		if password != "" {
-			conn, err = redis.Dial(network, addr,
-				redis.DialPassword(password),
-				redis.DialTLSConfig(clientTLSConfig),
-				redis.DialUseTLS(true),
-				redis.DialTLSSkipVerify(true),
-			)
+			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
+				Addr:      addr,
+				Password:  password,
+				TLSConfig: clientTLSConfig,
+			})
 		} else {
-			conn, err = redis.Dial(network, addr,
-				redis.DialTLSConfig(clientTLSConfig),
-				redis.DialUseTLS(true),
-				redis.DialTLSSkipVerify(true),
-			)
+			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
+				Addr:      addr,
+				TLSConfig: clientTLSConfig,
+			})
 		}
 	} else {
 		if password != "" {
-			conn, err = redis.Dial(network, addr, redis.DialPassword(password))
+			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
+				Addr:     addr,
+				Password: password,
+			})
 		} else {
-			conn, err = redis.Dial(network, addr)
+			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
+				Addr: addr,
+			})
 		}
 	}
+
 	if err != nil {
 		log.Fatalf("Error preparing for benchmark, while creating new connection. error = %v", err)
 	}
-	return rg.GraphNew(graphName, conn), conn
+	if conn != nil {
+		graph = conn.SelectGraph(graphName)
+	}
+	return graph, conn
 }

@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-redisgraph-benchmark-go
+falkordb-benchmark
 
 # Test binary, built with `go test -c`
 *.test

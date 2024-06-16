@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/RedisGraph/redisgraph-go"
+	"github.com/FalkorDB/falkordb-go"
 	"golang.org/x/time/rate"
 	"log"
 	"math/rand"
@@ -11,33 +11,33 @@ import (
 	"time"
 )
 
-func ingestionRoutine(rg *redisgraph.Graph, continueOnError bool, cmdS []string, commandIsRO []bool, commandsCDF []float32, randomIntPadding, randomIntMax int64, number_samples uint64, loop bool, debug_level int, wg *sync.WaitGroup, useLimiter bool, rateLimiter *rate.Limiter, statsChannel chan GraphQueryDatapoint, replacementEnabled bool, replacementArr []map[string]string, commandStartPos uint64) {
+func ingestionRoutine(rg *falkordb.Graph, continueOnError bool, cmdS []string, commandIsRO []bool, commandsCDF []float32, randomIntPadding, randomIntMax int64, numberSamples uint64, loop bool, verbose bool, wg *sync.WaitGroup, useLimiter bool, rateLimiter *rate.Limiter, statsChannel chan GraphQueryDatapoint, replacementEnabled bool, replacementArr []map[string]string, commandStartPos uint64) {
 	defer wg.Done()
 	var replacementTerms map[string]string
-	for i := 0; uint64(i) < number_samples || loop; i++ {
+	for i := 0; uint64(i) < numberSamples || loop; i++ {
 		cmdPos := sample(commandsCDF)
 		termReplacementPos := commandStartPos + uint64(i)
 		if replacementEnabled {
 			replacementTerms = replacementArr[termReplacementPos]
 		}
-		sendCmdLogic(rg, cmdS[cmdPos], commandIsRO[cmdPos], randomIntPadding, randomIntMax, cmdPos, continueOnError, debug_level, useLimiter, rateLimiter, statsChannel, replacementEnabled, replacementTerms)
+		sendCmdLogic(rg, cmdS[cmdPos], commandIsRO[cmdPos], randomIntPadding, randomIntMax, cmdPos, continueOnError, verbose, useLimiter, rateLimiter, statsChannel, replacementEnabled, replacementTerms)
 	}
 }
 
-func sendCmdLogic(rg *redisgraph.Graph, query string, readOnly bool, randomIntPadding, randomIntMax int64, cmdPos int, continueOnError bool, debug_level int, useRateLimiter bool, rateLimiter *rate.Limiter, statsChannel chan GraphQueryDatapoint, replacementEnabled bool, replacementTerms map[string]string) {
+func sendCmdLogic(graph *falkordb.Graph, query string, readOnly bool, randomIntPadding, randomIntMax int64, cmdPos int, continueOnError bool, verbose bool, useRateLimiter bool, rateLimiter *rate.Limiter, statsChannel chan GraphQueryDatapoint, replacementEnabled bool, replacementTerms map[string]string) {
 	if useRateLimiter {
 		r := rateLimiter.ReserveN(time.Now(), int(1))
 		time.Sleep(r.Delay())
 	}
 	var err error
-	var queryResult *redisgraph.QueryResult
+	var queryResult *falkordb.QueryResult
 
 	processedQuery := processQuery(query, randomIntPadding, randomIntMax, replacementEnabled, replacementTerms)
 	startT := time.Now()
 	if readOnly {
-		queryResult, err = rg.ROQuery(processedQuery)
+		queryResult, err = graph.ROQuery(processedQuery, map[string]interface{}{}, nil)
 	} else {
-		queryResult, err = rg.Query(processedQuery)
+		queryResult, err = graph.Query(processedQuery, map[string]interface{}{}, nil)
 	}
 	endT := time.Now()
 
@@ -58,7 +58,7 @@ func sendCmdLogic(rg *redisgraph.Graph, query string, readOnly bool, randomIntPa
 	if err != nil {
 		datapoint.Error = true
 		if continueOnError {
-			if debug_level > 0 {
+			if verbose {
 				log.Println(fmt.Sprintf("Received an error with the following query(s): %v, error: %v", query, err))
 			}
 		} else {
@@ -66,7 +66,7 @@ func sendCmdLogic(rg *redisgraph.Graph, query string, readOnly bool, randomIntPa
 		}
 	} else {
 		datapoint.GraphInternalDurationMicros = int64(queryResult.InternalExecutionTime() * 1000.0)
-		if debug_level > 1 {
+		if verbose {
 			fmt.Printf("Issued query: %s\n", query)
 			fmt.Printf("Pretty printing result:\n")
 			queryResult.PrettyPrint()

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/HdrHistogram/hdrhistogram-go"
-	redistimeseries "github.com/RedisTimeSeries/redistimeseries-go"
 	"github.com/olekukonko/tablewriter"
 	"os"
 	"sync/atomic"
@@ -21,9 +20,9 @@ func (i *arrayStringParameters) Set(value string) error {
 	return nil
 }
 
-func printFinalSummary(queries []string, queryRates []float64, totalMessages uint64, duration time.Duration) {
+func printFinalSummary(queries []string, totalMessages uint64, duration time.Duration) {
 	writer := os.Stdout
-	messageRate := float64(totalMessages) / float64(duration.Seconds())
+	messageRate := float64(totalMessages) / duration.Seconds()
 
 	fmt.Printf("\n")
 	fmt.Printf("################# RUNTIME STATS #################\n")
@@ -37,7 +36,9 @@ func printFinalSummary(queries []string, queryRates []float64, totalMessages uin
 }
 
 func renderTable(queries []string, writer *os.File, tableTitle string, includeCalls bool, includeErrors bool, errorSlice []uint64, duration time.Duration, detailedHistogram []*hdrhistogram.Histogram, overallHistogram *hdrhistogram.Histogram) {
-	fmt.Fprintf(writer, tableTitle)
+	_, err := fmt.Fprintf(writer, tableTitle)
+	if err != nil {
+	}
 	data := make([][]string, len(queries)+1)
 	for i := 0; i < len(queries); i++ {
 		insertTableLine(queries[i], data, i, includeCalls, includeErrors, errorSlice, duration, detailedHistogram[i])
@@ -60,21 +61,23 @@ func renderTable(queries []string, writer *os.File, tableTitle string, includeCa
 	table.Render()
 }
 func renderGraphInternalExecutionTimeTable(queries []string, writer *os.File, tableTitle string, detailedHistogram []*hdrhistogram.Histogram, overallHistogram *hdrhistogram.Histogram) {
-	fmt.Fprintf(writer, tableTitle)
+	_, err := fmt.Fprintf(writer, tableTitle)
+	if err != nil {
+	}
 	initialHeader := []string{"Query", " Internal Avg. latency(ms)", "Internal p50 latency(ms)", "Internal p95 latency(ms)", "Internal p99 latency(ms)"}
 	data := make([][]string, len(queries)+1)
 	i := 0
 	for i = 0; i < len(queries); i++ {
 		data[i] = make([]string, 5)
 		data[i][0] = queries[i]
-		data[i][1] = fmt.Sprintf("%.3f", float64(detailedHistogram[i].Mean()/1000.0))
+		data[i][1] = fmt.Sprintf("%.3f", detailedHistogram[i].Mean()/1000.0)
 		data[i][2] = fmt.Sprintf("%.3f", float64(detailedHistogram[i].ValueAtQuantile(50.0))/1000.0)
 		data[i][3] = fmt.Sprintf("%.3f", float64(detailedHistogram[i].ValueAtQuantile(95.0))/1000.0)
 		data[i][4] = fmt.Sprintf("%.3f", float64(detailedHistogram[i].ValueAtQuantile(99.0))/1000.0)
 	}
 	data[i] = make([]string, 5)
 	data[i][0] = "Total"
-	data[i][1] = fmt.Sprintf("%.3f", float64(overallHistogram.Mean()/1000.0))
+	data[i][1] = fmt.Sprintf("%.3f", overallHistogram.Mean()/1000.0)
 	data[i][2] = fmt.Sprintf("%.3f", float64(overallHistogram.ValueAtQuantile(50.0))/1000.0)
 	data[i][3] = fmt.Sprintf("%.3f", float64(overallHistogram.ValueAtQuantile(95.0))/1000.0)
 	data[i][4] = fmt.Sprintf("%.3f", float64(overallHistogram.ValueAtQuantile(99.0))/1000.0)
@@ -92,7 +95,7 @@ func insertTableLine(queryName string, data [][]string, i int, includeCalls, inc
 	data[i][0] = queryName
 	if includeCalls {
 		totalCmds := histogram.TotalCount()
-		cmdRate := float64(totalCmds) / float64(duration.Seconds())
+		cmdRate := float64(totalCmds) / duration.Seconds()
 		data[i][1] = fmt.Sprintf("%.f", cmdRate)
 		data[i][2] = fmt.Sprintf("%d", histogram.TotalCount())
 		data[i] = append(data[i], "", "")
@@ -111,14 +114,16 @@ func insertTableLine(queryName string, data [][]string, i int, includeCalls, inc
 		data[i] = append(data[i], "")
 		latencyPadding++
 	}
-	data[i][1+latencyPadding] = fmt.Sprintf("%.3f", float64(histogram.Mean()/1000.0))
+	data[i][1+latencyPadding] = fmt.Sprintf("%.3f", histogram.Mean()/1000.0)
 	data[i][2+latencyPadding] = fmt.Sprintf("%.3f", float64(histogram.ValueAtQuantile(50.0))/1000.0)
 	data[i][3+latencyPadding] = fmt.Sprintf("%.3f", float64(histogram.ValueAtQuantile(95.0))/1000.0)
 	data[i][4+latencyPadding] = fmt.Sprintf("%.3f", float64(histogram.ValueAtQuantile(99.0))/1000.0)
 }
 
 func renderGraphResultSetTable(queries []string, writer *os.File, tableTitle string) {
-	fmt.Fprintf(writer, tableTitle)
+	_, err := fmt.Fprintf(writer, tableTitle)
+	if err != nil {
+	}
 	initialHeader := []string{"Query", "Nodes created", "Nodes deleted", "Labels added", "Properties set", " Relationships created", " Relationships deleted"}
 	data := make([][]string, len(queries)+1)
 	i := 0
@@ -148,14 +153,14 @@ func renderGraphResultSetTable(queries []string, writer *os.File, tableTitle str
 	table.Render()
 }
 
-func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, message_limit uint64, loop bool, client *redistimeseries.Client, suffix string) bool {
+func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, messageLimit uint64, loop bool) bool {
 
 	start := startTime
 	prevTime := startTime
 	prevMessageCount := uint64(0)
 	var currentCmds uint64
 	var currentErrs uint64
-	messageRateTs := []float64{}
+	var messageRateTs []float64
 	fmt.Printf("%26s %7s %25s %25s %7s %25s %25s %26s\n", "Test time", " ", "Total Commands", "Total Errors", "", "Command Rate", "Client p50 with RTT(ms)", "Graph Internal Time p50 (ms)")
 	for {
 		select {
@@ -168,7 +173,7 @@ func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, message
 				messageRate := calculateRateMetrics(int64(currentCmds), int64(prevMessageCount), took)
 				completionPercentStr := "[----%]"
 				if !loop {
-					completionPercent := float64(currentCmds) / float64(message_limit) * 100.0
+					completionPercent := float64(currentCmds) / float64(messageLimit) * 100.0
 					completionPercentStr = fmt.Sprintf("[%3.1f%%]", completionPercent)
 				}
 				errorPercent := float64(currentErrs) / float64(currentCmds) * 100.0
@@ -184,29 +189,10 @@ func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, message
 				}
 				prevMessageCount = currentCmds
 				prevTime = now
-				if client != nil {
-					opts := redistimeseries.DefaultCreateOptions
-					for _, percentile := range []float64{0, 50.0, 95, 99, 99.9, 100.0} {
-						overallIncludingRTT := float64(clientSide_AllQueries_OverallLatencies.ValueAtQuantile(percentile)) / 1000.0
-						overallRunTimeGraph := float64(serverSide_AllQueries_GraphInternalTime_OverallLatencies.ValueAtQuantile(percentile)) / 1000.0
-						instantIncludingRTT := float64(clientSide_AllQueries_InstantLatencies.ValueAtQuantile(percentile)) / 1000.0
-						instantRunTimeGraph := float64(serverSide_AllQueries_GraphInternalTime_InstantLatencies.ValueAtQuantile(percentile)) / 1000.0
-						opts.Labels = map[string]string{"metric": "overallIncludingRTT"}
-						client.AddWithOptions(fmt.Sprintf("%s:overallIncludingRTT:p%.3f", suffix, percentile), now.UTC().Unix()*1000, overallIncludingRTT, opts)
-						opts.Labels = map[string]string{"metric": "overallRunTimeGraph"}
-						client.AddWithOptions(fmt.Sprintf("%s:overallRunTimeGraph:p%.3f", suffix, percentile), now.UTC().Unix()*1000, overallRunTimeGraph, opts)
-						opts.Labels = map[string]string{"metric": "instantIncludingRTT"}
-						client.AddWithOptions(fmt.Sprintf("%s:instantIncludingRTT:p%.3f", suffix, percentile), now.UTC().Unix()*1000, instantIncludingRTT, opts)
-						opts.Labels = map[string]string{"metric": "instantRunTimeGraph"}
-						client.AddWithOptions(fmt.Sprintf("%s:instantRunTimeGraph:p%.3f", suffix, percentile), now.UTC().Unix()*1000, instantRunTimeGraph, opts)
-					}
-					opts.Labels = map[string]string{"metric": "messageRate"}
-					client.AddWithOptions(fmt.Sprintf("%s:messageRate", suffix), now.UTC().Unix()*1000, messageRate, opts)
-				}
 
 				fmt.Printf("%25.0fs %s %25d %25d [%3.1f%%] %25.2f %19.3f (%3.3f) %20.3f (%3.3f)\t", time.Since(start).Seconds(), completionPercentStr, currentCmds, currentErrs, errorPercent, messageRate, instantP50, p50, instantP50RunTimeGraph, p50RunTimeGraph)
 				fmt.Printf("\r")
-				if message_limit > 0 && currentCmds >= message_limit && !loop {
+				if messageLimit > 0 && currentCmds >= messageLimit && !loop {
 					return true
 				}
 				// The locks we acquire here do not affect the clients

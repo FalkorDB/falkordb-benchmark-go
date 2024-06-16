@@ -6,6 +6,7 @@ import (
 )
 
 // Vars only for git sha and diff handling
+
 var GitSHA1 string = ""
 var GitDirty string = "0"
 
@@ -20,7 +21,7 @@ func toolGitDirty() (dirty bool) {
 	dirty = false
 	dirtyLines, err := strconv.Atoi(strings.TrimSpace(GitDirty))
 	if err == nil {
-		dirty = (dirtyLines != 0)
+		dirty = dirtyLines != 0
 	}
 	return
 }

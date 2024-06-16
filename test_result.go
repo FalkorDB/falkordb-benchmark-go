@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/HdrHistogram/hdrhistogram-go"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -32,9 +31,9 @@ type GraphQueryDatapoint struct {
 type TestResult struct {
 
 	// Test Configs
-	resultFormatVersion              string `json:"ResultFormatVersion"`
+	ResultFormatVersion              string `json:"ResultFormatVersion"`
 	Metadata                         string `json:"Metadata"`
-	Clients                          uint   `json:"Clients"`
+	Clients                          uint64 `json:"Clients"`
 	MaxRps                           uint64 `json:"MaxRps"`
 	RandomSeed                       int64  `json:"RandomSeed"`
 	BenchmarkConfiguredCommandsLimit uint64 `json:"BenchmarkConfiguredCommandsLimit"`
@@ -77,8 +76,8 @@ type TestResult struct {
 	ServerRunTimeStats map[int64]interface{} `json:"ServerRunTimeStats"`
 }
 
-func NewTestResult(metadata string, clients uint, commandsLimit uint64, maxRps uint64, testDescription string) *TestResult {
-	return &TestResult{resultFormatVersion: resultFormatVersion, BenchmarkConfiguredCommandsLimit: commandsLimit, BenchmarkFullyRun: false, Metadata: metadata, Clients: clients, MaxRps: maxRps, TestDescription: testDescription}
+func NewTestResult(metadata string, clients uint64, commandsLimit uint64, maxRps uint64, testDescription string) *TestResult {
+	return &TestResult{ResultFormatVersion: resultFormatVersion, BenchmarkConfiguredCommandsLimit: commandsLimit, BenchmarkFullyRun: false, Metadata: metadata, Clients: clients, MaxRps: maxRps, TestDescription: testDescription}
 }
 
 func (r *TestResult) SetUsedRandomSeed(seed int64) *TestResult {
@@ -155,20 +154,20 @@ func processGraphDatapointsChannel(graphStatsChann chan GraphQueryDatapoint, c c
 	}
 }
 
-func saveJsonResult(testResult *TestResult, jsonOutputFile *string) {
+func saveJsonResult(testResult *TestResult, jsonOutputFile string) {
 	file, err := json.MarshalIndent(testResult, "", " ")
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Saving JSON results file to %s\n", *jsonOutputFile)
-	err = ioutil.WriteFile(*jsonOutputFile, file, 0644)
+	log.Printf("Saving JSON results file to %s\n", jsonOutputFile)
+	err = os.WriteFile(jsonOutputFile, file, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func calculateRateMetrics(current, prev int64, took time.Duration) (rate float64) {
-	rate = float64(current-prev) / float64(took.Seconds())
+	rate = float64(current-prev) / took.Seconds()
 	return
 }
 
