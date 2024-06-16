@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -42,18 +43,21 @@ func DownloadDataset(url string) error {
 	return nil
 }
 
-func RunFalkorDB() error {
+func RunFalkorDB() (cancel context.CancelFunc, err error) {
 	// Create the command with hardcoded arguments
-	cmd := exec.Command("redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
 
 	// Create a pipe for the stdout of the command
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
+		cancel()
 		log.Fatalf("failed to get stdout pipe: %s", err)
 	}
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
+		cancel()
 		log.Fatalf("failed to start command: %s", err)
 	}
 
@@ -83,20 +87,13 @@ func RunFalkorDB() error {
 	select {
 	case found := <-done:
 		if !found {
-			return fmt.Errorf("substring not found")
+			return
 		}
 	case <-time.After(10 * time.Second):
-		return fmt.Errorf("timeout: substring not found within 10 seconds")
+		err = fmt.Errorf("timeout: substring not found within 10 seconds")
+		cancel()
+		return
 	}
 
-	// Continue running the process
-	go func() {
-		if err := cmd.Wait(); err != nil {
-			fmt.Println("Command finished with error:", err)
-		} else {
-			fmt.Println("Command finished successfully")
-		}
-	}()
-
-	return nil
+	return
 }

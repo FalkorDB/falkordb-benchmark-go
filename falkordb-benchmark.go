@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/FalkorDB/falkordb-go"
-	"github.com/gomodule/redigo/redis"
 	"golang.org/x/time/rate"
 	"log"
 	"math/rand"
@@ -48,10 +47,11 @@ func main() {
 		log.Fatal("Could not download dataset")
 	}
 
-	err = RunFalkorDB()
+	cancelFunc, err := RunFalkorDB()
 	if err != nil {
 		log.Fatalf("Could not start Falkor in time %s", err)
 	}
+	defer cancelFunc()
 
 	totalQueries := len(yamlConfig.Parameters.Queries) + len(yamlConfig.Parameters.RoQueries)
 	if totalQueries < 1 {
@@ -61,7 +61,7 @@ func main() {
 	RandomSeed := *yamlConfig.Parameters.RandomSeed
 	testResult := NewTestResult("", yamlConfig.Parameters.NumClients, yamlConfig.Parameters.NumRequests, yamlConfig.Parameters.RequestsPerSecond, "")
 	testResult.SetUsedRandomSeed(RandomSeed)
-	log.Printf("Using random seed: %d.\n", RandomSeed)
+	log.Printf("Using RNG seed: %d.\n", RandomSeed)
 
 	var requestRate = Inf
 	var requestBurst = 1
@@ -151,12 +151,19 @@ func main() {
 	c1 := make(chan os.Signal, 1)
 	signal.Notify(c1, os.Interrupt)
 
-	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
+	graph, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
 		log.Println(fmt.Sprintf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err))
 	} else {
 		log.Println(fmt.Sprintf("Detected FalkorDB version %d\n", falkorDBVersion))
+	}
+
+	for _, command := range yamlConfig.DBConfig.InitCommands {
+		_, err := graph.Query(command, map[string]interface{}{}, nil)
+		if err != nil {
+			log.Fatalf("Could not execute init query %s", err)
+		}
 	}
 
 	tick := time.NewTicker(time.Duration(yamlConfig.CliUpdateTick) * time.Second)
@@ -191,8 +198,8 @@ func main() {
 	duration := time.Since(startTime)
 
 	// benchmarked ended, close the connections
-	for _, standaloneConn := range conns {
-		err = standaloneConn.Conn.Close()
+	for _, conn := range conns {
+		err = conn.Conn.Close()
 	}
 
 	//wait for all stats to be processed
@@ -227,27 +234,17 @@ func GetDBConfigsMap(version int64) map[string]interface{} {
 // getRedisGraphVersion returns RedisGraph version by issuing "MODULE LIST" command
 // and iterating through the availabe modules up until "graph" is found as the name property
 func getFalkorDBVersion(falkorClient *falkordb.FalkorDB) (version int64, err error) {
-	var values []interface{}
-	var moduleInfo []interface{}
-	var moduleName string
 
 	ctx := context.Background()
-	values, err = redis.Values(falkorClient.Conn.Do(ctx, "MODULE", "LIST").Result())
-	if err != nil {
-		return
-	}
-	for _, rawModule := range values {
-		moduleInfo, err = redis.Values(rawModule, err)
-		if err != nil {
-			return
-		}
-		moduleName, err = redis.String(moduleInfo[1], err)
-		if err != nil {
-			return
-		}
-		if moduleName == "graph" {
-			version, err = redis.Int64(moduleInfo[3], err)
+	result, err := falkorClient.Conn.Do(ctx, "MODULE", "LIST").Result()
+	modules := result.([]interface{})
+
+	for _, module := range modules {
+		moduleMap := module.(map[interface{}]interface{})
+		if moduleMap["name"].(string) == "graph" {
+			version = moduleMap["ver"].(int64)
 		}
 	}
+
 	return
 }
