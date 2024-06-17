@@ -16,13 +16,55 @@ import (
 	"time"
 )
 
+func printVersion(version bool) {
+	gitSha := toolGitSHA1()
+	gitDirtyStr := ""
+	if toolGitDirty() {
+		gitDirtyStr = "-dirty"
+	}
+	fmt.Printf("falkordb-benchmark (git_sha1:%s%s)\n", gitSha, gitDirtyStr)
+	if version {
+		os.Exit(0)
+	}
+}
+
+func GetDBConfigsMap(version int64) map[string]interface{} {
+	dbConfigsMap := map[string]interface{}{}
+	dbConfigsMap["RedisGraphVersion"] = version
+	return dbConfigsMap
+}
+
+// getRedisGraphVersion returns RedisGraph version by issuing "MODULE LIST" command
+// and iterating through the availabe modules up until "graph" is found as the name property
+func getFalkorDBVersion(falkorClient *falkordb.FalkorDB) (version int64, err error) {
+
+	ctx := context.Background()
+	result, err := falkorClient.Conn.Do(ctx, "MODULE", "LIST").Result()
+	if err != nil || result == nil {
+		return
+	}
+
+	modules := result.([]interface{})
+
+	for _, module := range modules {
+		moduleMap := module.(map[interface{}]interface{})
+		if moduleMap["name"].(string) == "graph" {
+			version = moduleMap["ver"].(int64)
+		}
+	}
+
+	return
+}
+
 func main() {
+	version := flag.Bool("v", false, "Output version and exit")
 	verbose := flag.Bool("verbose", false, "Client verbosity level.")
+	loop := flag.Bool("loop", false, "Run this benchmark in a loop until interrupted")
+	cliUpdateTick := flag.Int("cli_update_tick", 5, "How often should the CLI stdout be updated")
 	yamlConfigFile := flag.String("yaml_config", "", "A .yaml file containing the configuration for this benchmark")
 	dataImportFile := flag.String("data-import-terms", "", "Read field replacement data from file in csv format. each column should start and end with '__' chars. Example __field1__,__field2__.")
 	dataImportMode := flag.String("data-import-terms-mode", "seq", "Either 'seq' or 'rand'.")
-	version := flag.Bool("v", false, "Output version and exit")
-	loop := flag.Bool("loop", false, "Run this benchmark in a loop until interrupted")
+	jsonOutputFile := flag.String("output_file", "benchmark-results.json", "The name of the output file")
 	flag.Parse()
 
 	yamlConfig, err := parseYaml(*yamlConfigFile)
@@ -31,33 +73,35 @@ func main() {
 		return
 	}
 
-	gitSha := toolGitSHA1()
-	gitDirtyStr := ""
-	if toolGitDirty() {
-		gitDirtyStr = "-dirty"
-	}
-	log.Printf("falkordb-benchmark (git_sha1:%s%s)\n", gitSha, gitDirtyStr)
-	if *version {
-		os.Exit(0)
-	}
+	printVersion(*version)
 
-	log.Printf("Running in Verbose Mode: %t.\n", *verbose)
+	fmt.Printf("Running in Verbose Mode: %t.\n", *verbose)
 
-	if IsURL(yamlConfig.DBConfig.Dataset) {
-		if DownloadDataset(yamlConfig.DBConfig.Dataset) != nil {
-			log.Fatal("Could not download dataset")
-		}
-	} else {
-		if CopyDataset(yamlConfig.DBConfig.Dataset) != nil {
-			log.Fatal("Could not copy dataset")
+	if yamlConfig.DBConfig.Dataset != nil {
+		if IsURL(*yamlConfig.DBConfig.Dataset) {
+			err = DownloadDataset(*yamlConfig.DBConfig.Dataset)
+			if err != nil {
+				log.Fatal("Could not download dataset ", err)
+			}
+		} else {
+			err = CopyDataset(*yamlConfig.DBConfig.Dataset)
+			if err != nil {
+				log.Fatal("Could not copy dataset ", err)
+			}
 		}
 	}
 
-	cancelFunc, err := RunFalkorDB()
+	cancelFunc, cmd, err := RunFalkorDBProcess()
 	if err != nil {
-		log.Fatalf("Could not start Falkor in time %s", err)
+		log.Fatalf("Could not start Falkor in time, %s", err)
 	}
-	defer cancelFunc()
+
+	defer func() {
+		fmt.Println("Stopping FalkorDB")
+		cancelFunc()
+		cmd.Process.Kill()
+		cmd.Process.Wait()
+	}()
 
 	totalQueries := len(yamlConfig.Parameters.Queries) + len(yamlConfig.Parameters.RoQueries)
 	if totalQueries < 1 {
@@ -67,7 +111,7 @@ func main() {
 	RandomSeed := *yamlConfig.Parameters.RandomSeed
 	testResult := NewTestResult("", yamlConfig.Parameters.NumClients, yamlConfig.Parameters.NumRequests, yamlConfig.Parameters.RequestsPerSecond, "")
 	testResult.SetUsedRandomSeed(RandomSeed)
-	log.Printf("Using RNG seed: %d.\n", RandomSeed)
+	fmt.Printf("Using RNG seed: %d.\n", RandomSeed)
 
 	var requestRate = Inf
 	var requestBurst = 1
@@ -86,12 +130,12 @@ func main() {
 	// a WaitGroup for the goroutines to tell us they've stopped
 	wg := sync.WaitGroup{}
 	if !*loop {
-		log.Printf("Total clients: %d. Commands per client: %d Total commands: %d\n", yamlConfig.Parameters.NumClients, samplesPerClient, yamlConfig.Parameters.NumRequests)
+		fmt.Printf("Total clients: %d. Commands per client: %d Total commands: %d\n", yamlConfig.Parameters.NumClients, samplesPerClient, yamlConfig.Parameters.NumRequests)
 		if samplesPerClientRemainder != 0 {
-			log.Printf("Last client will issue: %d commands.\n", samplesPerClientRemainder+samplesPerClient)
+			fmt.Printf("Last client will issue: %d commands.\n", samplesPerClientRemainder+samplesPerClient)
 		}
 	} else {
-		log.Printf("Running in loop until you hit Ctrl+C\n")
+		fmt.Printf("Running in loop until you hit Ctrl+C\n")
 	}
 
 	randGen := rand.New(rand.NewSource(RandomSeed))
@@ -100,7 +144,7 @@ func main() {
 	var replacementArr []map[string]string
 	dataReplacementEnabled := false
 	if *dataImportFile != "" {
-		log.Printf("Reading term data import file from: %s. Using '%s' record read mode.\n", *dataImportFile, *dataImportMode)
+		fmt.Printf("Reading term data import file from: %s. Using '%s' record read mode.\n", *dataImportFile, *dataImportMode)
 		dataReplacementEnabled = true
 		replacementArr = make([]map[string]string, 0)
 
@@ -134,7 +178,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Unable to parse file as CSV for "+*dataImportFile, err)
 		}
-		log.Printf("There are a total of %d disticint lines of terms. Each line has %d columns. Prepared %d groups of records for the benchmark.\n", rlen, len(headers), len(replacementArr))
+		fmt.Printf("There are a total of %d disticint lines of terms. Each line has %d columns. Prepared %d groups of records for the benchmark.\n", rlen, len(headers), len(replacementArr))
 
 	}
 
@@ -160,20 +204,24 @@ func main() {
 	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
-		log.Println(fmt.Sprintf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err))
+		fmt.Println(fmt.Sprintf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err))
 	} else {
-		log.Println(fmt.Sprintf("Detected FalkorDB version %d\n", falkorDBVersion))
+		fmt.Println(fmt.Sprintf("Detected FalkorDB version %d\n", falkorDBVersion))
 	}
 
 	for _, command := range yamlConfig.DBConfig.InitCommands {
-		res, err := falkorConn.Conn.Do(context.Background(), command).Result()
-		log.Printf(res.(string))
+		interfaceArray := make([]interface{}, len(command))
+		for i, v := range command {
+			interfaceArray[i] = v
+		}
+
+		_, err := falkorConn.Conn.Do(context.Background(), interfaceArray...).Result()
 		if err != nil {
 			log.Fatalf("Could not execute init query %s", err)
 		}
 	}
 
-	tick := time.NewTicker(time.Duration(yamlConfig.CliUpdateTick) * time.Second)
+	tick := time.NewTicker(time.Duration(*cliUpdateTick) * time.Second)
 
 	dataPointProcessingWg.Add(1)
 	go processGraphDatapointsChannel(graphDatapointsChann, c1, yamlConfig.Parameters.NumRequests, &dataPointProcessingWg, &instantHistogramsResetMutex)
@@ -195,7 +243,7 @@ func main() {
 			clientTotalCmds = samplesPerClientRemainder + samplesPerClient
 		}
 		cmdStartPos := uint64(clientId) * samplesPerClient
-		go ingestionRoutine(&graphs[clientId], *yamlConfig.ContinueOnError, allQueries, queryIsRO, cdf, *yamlConfig.Parameters.RandomIntMin, randLimit, clientTotalCmds, *loop, *verbose, &wg, useRateLimiter, rateLimiter, graphDatapointsChann, dataReplacementEnabled, replacementArr, cmdStartPos)
+		go ingestionRoutine(&graphs[clientId], yamlConfig.ContinueOnError, allQueries, queryIsRO, cdf, *yamlConfig.Parameters.RandomIntMin, randLimit, clientTotalCmds, *loop, *verbose, &wg, useRateLimiter, rateLimiter, graphDatapointsChann, dataReplacementEnabled, replacementArr, cmdStartPos)
 	}
 
 	// enter the update loopUpdateCLIUpdateCLI
@@ -229,29 +277,5 @@ func main() {
 	// final merge of pending stats
 	printFinalSummary(allQueries, totalCommands, duration)
 
-	saveJsonResult(testResult, yamlConfig.JsonOutputFile)
-}
-
-func GetDBConfigsMap(version int64) map[string]interface{} {
-	dbConfigsMap := map[string]interface{}{}
-	dbConfigsMap["RedisGraphVersion"] = version
-	return dbConfigsMap
-}
-
-// getRedisGraphVersion returns RedisGraph version by issuing "MODULE LIST" command
-// and iterating through the availabe modules up until "graph" is found as the name property
-func getFalkorDBVersion(falkorClient *falkordb.FalkorDB) (version int64, err error) {
-
-	ctx := context.Background()
-	result, err := falkorClient.Conn.Do(ctx, "MODULE", "LIST").Result()
-	modules := result.([]interface{})
-
-	for _, module := range modules {
-		moduleMap := module.(map[interface{}]interface{})
-		if moduleMap["name"].(string) == "graph" {
-			version = moduleMap["ver"].(int64)
-		}
-	}
-
-	return
+	saveJsonResult(testResult, *jsonOutputFile)
 }

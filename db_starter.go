@@ -21,6 +21,8 @@ func DownloadDataset(url string) error {
 	}
 	defer out.Close()
 
+	fmt.Printf("Downloading dataset...")
+
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
@@ -39,8 +41,7 @@ func DownloadDataset(url string) error {
 		return err
 	}
 
-	log.Println("Downloaded dataset")
-
+	fmt.Println("Downloaded dataset")
 	return nil
 }
 
@@ -58,7 +59,12 @@ func CopyDataset(src string) error {
 	defer destinationFile.Close()
 
 	_, err = io.Copy(destinationFile, sourceFile)
-	return err
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Copied dataset")
+	return nil
 }
 
 func IsURL(str string) bool {
@@ -66,16 +72,26 @@ func IsURL(str string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func RunFalkorDB() (cancel context.CancelFunc, err error) {
+func RunFalkorDBDocker() error {
+	return nil
+}
+
+func RunFalkorDBProcess() (cancel context.CancelFunc, cmd *exec.Cmd, err error) {
 	// Create the command with hardcoded arguments
 	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
+	cmd = exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
 
 	// Create a pipe for the stdout of the command
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		cancel()
 		log.Fatalf("failed to get stdout pipe: %s", err)
+	}
+
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		cancel()
+		log.Fatalf("failed to get stderr pipe: %s", err)
 	}
 
 	// Start the command
@@ -92,7 +108,6 @@ func RunFalkorDB() (cancel context.CancelFunc, err error) {
 		defer close(done)
 		for scanner.Scan() {
 			line := scanner.Text()
-			log.Println("Read line:", line) // Print the line for debugging
 
 			// Check if the line contains the specified substring
 			if strings.Contains(line, "Ready to accept connections tcp") {
@@ -103,18 +118,29 @@ func RunFalkorDB() (cancel context.CancelFunc, err error) {
 		if err := scanner.Err(); err != nil {
 			fmt.Println("Error reading stdout:", err)
 		}
-		log.Printf(scanner.Text())
+
+		cmd.Process.Kill()
+		cmd.Process.Wait()
+
+		errOut, _ := io.ReadAll(stderrPipe)
+		err = fmt.Errorf("process closed: %s", string(errOut))
 		done <- false
 	}()
 
 	select {
 	case found := <-done:
 		if !found {
+			cancel()
+			cmd.Process.Kill()
+			cmd.Process.Wait()
 			return
 		}
+		fmt.Println("Database accepting connections")
 	case <-time.After(10 * time.Second):
 		err = fmt.Errorf("timeout: substring not found within 10 seconds")
 		cancel()
+		cmd.Process.Kill()
+		cmd.Process.Wait()
 		return
 	}
 

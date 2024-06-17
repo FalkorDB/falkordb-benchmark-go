@@ -14,29 +14,27 @@ type Query struct {
 type YamlConfig struct {
 	Name            *string `yaml:"name"`
 	Description     string  `yaml:"description,omitempty"`
-	DockerImage     *string `yaml:"docker_image"`
-	JsonOutputFile  string  `yaml:"json_output_file"`
-	CliUpdateTick   int     `yaml:"cli_update_tick"`
-	ContinueOnError *bool   `yaml:"continue_on_error"`
+	DockerImage     *string `yaml:"docker_image,omitempty"`
+	ContinueOnError bool    `yaml:"continue_on_error,omitempty"`
 	DBConfig        struct {
-		Host                   string   `yaml:"host"`
-		Port                   int      `yaml:"port"`
-		Graph                  string   `yaml:"graph"`
-		InitCommands           []string `yaml:"init_commands,flow"`
-		Dataset                string   `yaml:"dataset"`
-		DatasetLoadTimeoutSecs int      `yaml:"dataset_load_timeout_secs"`
-		Password               string   `yaml:"password"`
-		TlsCaCertFile          string   `yaml:"tls_ca_cert_file"`
+		Host                   string     `yaml:"host,omitempty"`
+		Port                   int        `yaml:"port,omitempty"`
+		Graph                  string     `yaml:"graph"`
+		InitCommands           [][]string `yaml:"init_commands,flow,omitempty"`
+		Dataset                *string    `yaml:"dataset,omitempty"`
+		DatasetLoadTimeoutSecs int        `yaml:"dataset_load_timeout_secs,omitempty"`
+		Password               string     `yaml:"password,omitempty"`
+		TlsCaCertFile          string     `yaml:"tls_ca_cert_file,omitempty"`
 	} `yaml:"db_config"`
 	Parameters struct {
 		NumClients        uint64  `yaml:"num_clients"`
 		NumRequests       uint64  `yaml:"num_requests"`
-		RequestsPerSecond uint64  `yaml:"rps"`
-		RandomIntMin      *int64  `yaml:"random_int_min"`
-		RandomIntMax      *int64  `yaml:"random_int_max"`
-		RandomSeed        *int64  `yaml:"random_seed"`
-		Queries           []Query `yaml:"queries,flow"`
-		RoQueries         []Query `yaml:"ro_queries,flow"`
+		RequestsPerSecond uint64  `yaml:"rps,omitempty"`
+		RandomIntMin      *int64  `yaml:"random_int_min,omitempty"`
+		RandomIntMax      *int64  `yaml:"random_int_max,omitempty"`
+		RandomSeed        *int64  `yaml:"random_seed,omitempty"`
+		Queries           []Query `yaml:"queries,flow,omitempty"`
+		RoQueries         []Query `yaml:"ro_queries,flow,omitempty"`
 	} `yaml:"parameters"`
 }
 
@@ -65,19 +63,6 @@ func parseYaml(yamlFile string) (yamlConfig YamlConfig, err error) {
 
 	if yamlConfig.DBConfig.DatasetLoadTimeoutSecs == 0 {
 		yamlConfig.DBConfig.DatasetLoadTimeoutSecs = 180
-	}
-
-	if yamlConfig.JsonOutputFile == "" {
-		yamlConfig.JsonOutputFile = "benchmark-results.json"
-	}
-
-	if yamlConfig.CliUpdateTick == 0 {
-		yamlConfig.CliUpdateTick = 5
-	}
-
-	if yamlConfig.ContinueOnError == nil {
-		yamlConfig.ContinueOnError = new(bool)
-		*yamlConfig.ContinueOnError = false
 	}
 
 	if yamlConfig.DBConfig.Host == "" {

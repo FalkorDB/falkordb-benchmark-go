@@ -25,9 +25,7 @@ func printFinalSummary(queries []string, totalMessages uint64, duration time.Dur
 }
 
 func renderTable(queries []string, writer *os.File, tableTitle string, includeCalls bool, includeErrors bool, errorSlice []uint64, duration time.Duration, detailedHistogram []*hdrhistogram.Histogram, overallHistogram *hdrhistogram.Histogram) {
-	_, err := fmt.Fprintf(writer, tableTitle)
-	if err != nil {
-	}
+	fmt.Fprintf(writer, tableTitle)
 	data := make([][]string, len(queries)+1)
 	for i := 0; i < len(queries); i++ {
 		insertTableLine(queries[i], data, i, includeCalls, includeErrors, errorSlice, duration, detailedHistogram[i])
@@ -50,9 +48,7 @@ func renderTable(queries []string, writer *os.File, tableTitle string, includeCa
 	table.Render()
 }
 func renderGraphInternalExecutionTimeTable(queries []string, writer *os.File, tableTitle string, detailedHistogram []*hdrhistogram.Histogram, overallHistogram *hdrhistogram.Histogram) {
-	_, err := fmt.Fprintf(writer, tableTitle)
-	if err != nil {
-	}
+	fmt.Fprintf(writer, tableTitle)
 	initialHeader := []string{"Query", " Internal Avg. latency(ms)", "Internal p50 latency(ms)", "Internal p95 latency(ms)", "Internal p99 latency(ms)"}
 	data := make([][]string, len(queries)+1)
 	i := 0
@@ -110,9 +106,7 @@ func insertTableLine(queryName string, data [][]string, i int, includeCalls, inc
 }
 
 func renderGraphResultSetTable(queries []string, writer *os.File, tableTitle string) {
-	_, err := fmt.Fprintf(writer, tableTitle)
-	if err != nil {
-	}
+	fmt.Fprintf(writer, tableTitle)
 	initialHeader := []string{"Query", "Nodes created", "Nodes deleted", "Labels added", "Properties set", " Relationships created", " Relationships deleted"}
 	data := make([][]string, len(queries)+1)
 	i := 0
