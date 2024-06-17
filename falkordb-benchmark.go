@@ -43,8 +43,14 @@ func main() {
 
 	log.Printf("Running in Verbose Mode: %t.\n", *verbose)
 
-	if DownloadDataset(yamlConfig.DBConfig.Dataset) != nil {
-		log.Fatal("Could not download dataset")
+	if IsURL(yamlConfig.DBConfig.Dataset) {
+		if DownloadDataset(yamlConfig.DBConfig.Dataset) != nil {
+			log.Fatal("Could not download dataset")
+		}
+	} else {
+		if CopyDataset(yamlConfig.DBConfig.Dataset) != nil {
+			log.Fatal("Could not copy dataset")
+		}
 	}
 
 	cancelFunc, err := RunFalkorDB()
@@ -151,7 +157,7 @@ func main() {
 	c1 := make(chan os.Signal, 1)
 	signal.Notify(c1, os.Interrupt)
 
-	graph, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
+	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
 		log.Println(fmt.Sprintf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err))
@@ -160,7 +166,8 @@ func main() {
 	}
 
 	for _, command := range yamlConfig.DBConfig.InitCommands {
-		_, err := graph.Query(command, map[string]interface{}{}, nil)
+		res, err := falkorConn.Conn.Do(context.Background(), command).Result()
+		log.Printf(res.(string))
 		if err != nil {
 			log.Fatalf("Could not execute init query %s", err)
 		}
