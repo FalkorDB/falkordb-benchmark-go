@@ -62,7 +62,7 @@ func sendCmdLogic(graph *falkordb.Graph, query string, readOnly bool, randomIntP
 				fmt.Println(fmt.Sprintf("Received an error with the following query(s): %v, error: %v", query, err))
 			}
 		} else {
-			log.Fatalf("Received an error with the following query(s): %v, error: %v", query, err)
+			log.Panicf("Received an error with the following query(s): %v, error: %v", query, err)
 		}
 	} else {
 		datapoint.GraphInternalDurationMicros = int64(queryResult.InternalExecutionTime() * 1000.0)

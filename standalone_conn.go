@@ -6,16 +6,17 @@ import (
 	"github.com/FalkorDB/falkordb-go"
 	"log"
 	"os"
+	"time"
 )
 
-func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile string) (graph *falkordb.Graph, conn *falkordb.FalkorDB) {
+func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile string, loadTimeout int) (graph *falkordb.Graph, conn *falkordb.FalkorDB) {
 
 	var err error
 	if tlsCaCertFile != "" {
 		// Load CA cert
 		caCert, err := os.ReadFile(tlsCaCertFile)
 		if err != nil {
-			log.Fatal(err)
+			log.Panicln(err)
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
@@ -32,31 +33,35 @@ func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile st
 		// This should be used only for testing.
 		if password != "" {
 			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
-				Addr:      addr,
-				Password:  password,
-				TLSConfig: clientTLSConfig,
+				Addr:        addr,
+				Password:    password,
+				TLSConfig:   clientTLSConfig,
+				ReadTimeout: time.Duration(loadTimeout) * time.Second,
 			})
 		} else {
 			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
-				Addr:      addr,
-				TLSConfig: clientTLSConfig,
+				Addr:        addr,
+				TLSConfig:   clientTLSConfig,
+				ReadTimeout: time.Duration(loadTimeout) * time.Second,
 			})
 		}
 	} else {
 		if password != "" {
 			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
-				Addr:     addr,
-				Password: password,
+				Addr:        addr,
+				Password:    password,
+				ReadTimeout: time.Duration(loadTimeout) * time.Second,
 			})
 		} else {
 			conn, err = falkordb.FalkorDBNew(&falkordb.ConnectionOption{
-				Addr: addr,
+				Addr:        addr,
+				ReadTimeout: time.Duration(loadTimeout) * time.Second,
 			})
 		}
 	}
 
 	if err != nil {
-		log.Fatalf("Error preparing for benchmark, while creating new connection. error = %v", err)
+		log.Panicf("Error preparing for benchmark, while creating new connection. error = %v", err)
 	}
 	if conn != nil {
 		graph = conn.SelectGraph(graphName)

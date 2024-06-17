@@ -31,7 +31,7 @@ func prepareCommandsDistribution(allQueries []string, queryRates []float64) (int
 
 	// probability density function
 	if math.Abs(1.0-totalRateSum) > 0.01 {
-		log.Fatalf("Total ratio should be 1.0 ( currently is %f )", totalRateSum)
+		log.Panicf("Total ratio should be 1.0 ( currently is %f )", totalRateSum)
 	}
 
 	pdf := make([]float32, len(allQueries))

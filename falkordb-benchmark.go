@@ -69,7 +69,7 @@ func main() {
 
 	yamlConfig, err := parseYaml(*yamlConfigFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 		return
 	}
 
@@ -81,31 +81,31 @@ func main() {
 		if IsURL(*yamlConfig.DBConfig.Dataset) {
 			err = DownloadDataset(*yamlConfig.DBConfig.Dataset)
 			if err != nil {
-				log.Fatal("Could not download dataset ", err)
+				log.Panicln("Could not download dataset ", err)
 			}
 		} else {
 			err = CopyDataset(*yamlConfig.DBConfig.Dataset)
 			if err != nil {
-				log.Fatal("Could not copy dataset ", err)
+				log.Panicln("Could not copy dataset ", err)
 			}
 		}
 	}
 
-	cancelFunc, cmd, err := RunFalkorDBProcess()
+	cancelFunc, cmd, err := RunFalkorDBProcess(yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
 	if err != nil {
-		log.Fatalf("Could not start Falkor in time, %s", err)
+		log.Panicf("Could not start Falkor in time, %s", err)
 	}
 
 	defer func() {
 		fmt.Println("Stopping FalkorDB")
-		cancelFunc()
 		cmd.Process.Kill()
 		cmd.Process.Wait()
+		cancelFunc()
 	}()
 
 	totalQueries := len(yamlConfig.Parameters.Queries) + len(yamlConfig.Parameters.RoQueries)
 	if totalQueries < 1 {
-		log.Fatal("You need to specify at least a query with the -query parameter or -query-ro. For example: -query=\"CREATE (n)\"")
+		log.Panicln("You need to specify at least a query with the -query parameter or -query-ro. For example: -query=\"CREATE (n)\"")
 	}
 
 	RandomSeed := *yamlConfig.Parameters.RandomSeed
@@ -150,7 +150,7 @@ func main() {
 
 		f, err := os.Open(*dataImportFile)
 		if err != nil {
-			log.Fatal("Unable to read input file "+*dataImportFile, err)
+			log.Panicln("Unable to read input file "+*dataImportFile, err)
 		}
 		defer func(f *os.File) {
 			err := f.Close()
@@ -176,7 +176,7 @@ func main() {
 			replacementArr = append(replacementArr, lineMap)
 		}
 		if err != nil {
-			log.Fatal("Unable to parse file as CSV for "+*dataImportFile, err)
+			log.Panicln("Unable to parse file as CSV for "+*dataImportFile, err)
 		}
 		fmt.Printf("There are a total of %d disticint lines of terms. Each line has %d columns. Prepared %d groups of records for the benchmark.\n", rlen, len(headers), len(replacementArr))
 
@@ -201,7 +201,7 @@ func main() {
 	c1 := make(chan os.Signal, 1)
 	signal.Notify(c1, os.Interrupt)
 
-	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
+	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
 		fmt.Println(fmt.Sprintf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err))
@@ -217,7 +217,7 @@ func main() {
 
 		_, err := falkorConn.Conn.Do(context.Background(), interfaceArray...).Result()
 		if err != nil {
-			log.Fatalf("Could not execute init query %s", err)
+			log.Panicf("Could not execute init query %s", err)
 		}
 	}
 
@@ -232,7 +232,7 @@ func main() {
 	for clientId := 0; uint64(clientId) < yamlConfig.Parameters.NumClients; clientId++ {
 		wg.Add(1)
 
-		graphPtr, connsPtr := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile)
+		graphPtr, connsPtr := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, 5)
 		graphs[clientId] = *graphPtr
 		conns[clientId] = *connsPtr
 

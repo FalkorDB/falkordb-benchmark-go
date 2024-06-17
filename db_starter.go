@@ -76,7 +76,7 @@ func RunFalkorDBDocker() error {
 	return nil
 }
 
-func RunFalkorDBProcess() (cancel context.CancelFunc, cmd *exec.Cmd, err error) {
+func RunFalkorDBProcess(timeout int) (cancel context.CancelFunc, cmd *exec.Cmd, err error) {
 	// Create the command with hardcoded arguments
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd = exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
@@ -85,19 +85,19 @@ func RunFalkorDBProcess() (cancel context.CancelFunc, cmd *exec.Cmd, err error) 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		cancel()
-		log.Fatalf("failed to get stdout pipe: %s", err)
+		log.Panicf("failed to get stdout pipe: %s", err)
 	}
 
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
 		cancel()
-		log.Fatalf("failed to get stderr pipe: %s", err)
+		log.Panicf("failed to get stderr pipe: %s", err)
 	}
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		cancel()
-		log.Fatalf("failed to start command: %s", err)
+		log.Panicf("failed to start command: %s", err)
 	}
 
 	// Create a scanner to read the stdout line by line
@@ -136,7 +136,7 @@ func RunFalkorDBProcess() (cancel context.CancelFunc, cmd *exec.Cmd, err error) 
 			return
 		}
 		fmt.Println("Database accepting connections")
-	case <-time.After(10 * time.Second):
+	case <-time.After(time.Duration(timeout) * time.Second):
 		err = fmt.Errorf("timeout: substring not found within 10 seconds")
 		cancel()
 		cmd.Process.Kill()

@@ -100,6 +100,10 @@ func parseYaml(yamlFile string) (yamlConfig YamlConfig, err error) {
 		*yamlConfig.Parameters.RandomSeed = 12345
 	}
 
+	if yamlConfig.DBConfig.DatasetLoadTimeoutSecs == 0 {
+		yamlConfig.DBConfig.DatasetLoadTimeoutSecs = 180
+	}
+
 	return
 }
 
