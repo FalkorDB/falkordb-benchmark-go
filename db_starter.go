@@ -81,7 +81,6 @@ func RunFalkorDBProcess(dockerImage string, timeout int, hasDataset bool) (cance
 	} else {
 		cmd = exec.CommandContext(ctx, "docker", "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-e", "FALKORDB_ARGS=TIMEOUT 0", dockerImage)
 	}
-	//cmd = exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
 
 	// Create a pipe for the stdout of the command
 	stdoutPipe, err := cmd.StdoutPipe()

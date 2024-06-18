@@ -74,6 +74,14 @@ func main() {
 		log.Fatalf("Failed to parse YAML configuration: %v", err)
 	}
 
+	if *overrideImage != "" {
+		yamlConfig.DockerImage = *overrideImage
+	}
+
+	if yamlConfig.DockerImage == "" {
+		log.Fatalln("Docker image not specified in the yaml file or as a command line argument.")
+	}
+
 	fmt.Printf("Running in Verbose Mode: %t.\n", *verbose)
 
 	if yamlConfig.DBConfig.Dataset != nil {
@@ -90,9 +98,6 @@ func main() {
 		}
 	}
 
-	if *overrideImage != "" {
-		yamlConfig.DockerImage = *overrideImage
-	}
 	cancelFunc, cmd, err := RunFalkorDBProcess(yamlConfig.DockerImage, yamlConfig.DBConfig.DatasetLoadTimeoutSecs, yamlConfig.DBConfig.Dataset != nil)
 	if err != nil {
 		log.Fatalf("Could not start Falkor in time, %s", err)
