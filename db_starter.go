@@ -32,7 +32,7 @@ func DownloadDataset(url string) error {
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
+		return fmt.Errorf("failed to download dataset, server returned bad status: %s", resp.Status)
 	}
 
 	// Write the body to file
@@ -80,7 +80,6 @@ func RunFalkorDBProcess(dockerImage string, timeout int, hasDataset bool) (cance
 		cmd = exec.CommandContext(ctx, "docker", "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-v", "./dataset.rdb:/data/dump.rdb", "-e", "FALKORDB_ARGS=TIMEOUT 0", dockerImage)
 	} else {
 		cmd = exec.CommandContext(ctx, "docker", "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-e", "FALKORDB_ARGS=TIMEOUT 0", dockerImage)
-
 	}
 	//cmd = exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
 

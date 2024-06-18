@@ -1,3 +1,4 @@
+
 # falkordb-benchmark-go
 
 ### A FalkorDB benchmark utility
@@ -31,6 +32,7 @@ Usage of ./falkordb-benchmark:
 ```
 
 ## Configuration
+
 A configuration file is required to run the benchmark. The configuration file is a YAML file with the following structure:
 
 ```yaml
@@ -70,6 +72,7 @@ parameters:
 ```
 
 ## Output
+
 During this benchmark, the client will output the progress of the benchmark to the console. The output will be updated every 5 seconds by default.
 
 Once done, the output JSON file will look something like this:

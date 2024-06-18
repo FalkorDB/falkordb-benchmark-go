@@ -64,7 +64,7 @@ func sendCmdLogic(graph *falkordb.Graph, query string, readOnly bool, randomIntP
 		datapoint.Error = true
 		if continueOnError {
 			if verbose {
-				fmt.Println(fmt.Sprintf("Received an error with the following query(s): %v, error: %v", query, err))
+				fmt.Printf("Received an error with the following query(s): %v, error: %v", query, err)
 			}
 		} else {
 			log.Panicf("Received an error with the following query(s): %v, error: %v", query, err)

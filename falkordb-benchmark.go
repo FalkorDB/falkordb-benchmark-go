@@ -18,11 +18,10 @@ import (
 
 func printVersion(version bool) {
 	gitSha := toolGitSHA1()
-	gitDirtyStr := ""
-	if toolGitDirty() {
-		gitDirtyStr = "-dirty"
+	if gitSha == "" {
+		gitSha = "UNKNOWN"
 	}
-	fmt.Printf("falkordb-benchmark (git_sha1:%s%s)\n", gitSha, gitDirtyStr)
+	fmt.Printf("falkordb-benchmark (git_sha1:%s)\n", gitSha)
 	if version {
 		os.Exit(0)
 	}
@@ -68,13 +67,12 @@ func main() {
 	overrideImage := flag.String("override_image", "", "Override the docker image specified in the yaml file")
 	flag.Parse()
 
+	printVersion(*version)
+
 	yamlConfig, err := parseYaml(*yamlConfigFile)
 	if err != nil {
-		log.Panicln(err.Error())
-		return
+		log.Fatalf("Failed to parse YAML configuration: %v", err)
 	}
-
-	printVersion(*version)
 
 	fmt.Printf("Running in Verbose Mode: %t.\n", *verbose)
 
@@ -82,12 +80,12 @@ func main() {
 		if IsURL(*yamlConfig.DBConfig.Dataset) {
 			err = DownloadDataset(*yamlConfig.DBConfig.Dataset)
 			if err != nil {
-				log.Panicln("Could not download dataset ", err)
+				log.Fatalln("Could not download dataset ", err)
 			}
 		} else {
 			err = CopyDataset(*yamlConfig.DBConfig.Dataset)
 			if err != nil {
-				log.Panicln("Could not copy dataset ", err)
+				log.Fatalln("Could not copy dataset ", err)
 			}
 		}
 	}
@@ -97,9 +95,10 @@ func main() {
 	}
 	cancelFunc, cmd, err := RunFalkorDBProcess(yamlConfig.DockerImage, yamlConfig.DBConfig.DatasetLoadTimeoutSecs, yamlConfig.DBConfig.Dataset != nil)
 	if err != nil {
-		log.Panicf("Could not start Falkor in time, %s", err)
+		log.Fatalf("Could not start Falkor in time, %s", err)
 	}
 
+	// From here on we can't use log.Fatal in all its forms, as it will not call defer functions
 	defer func() {
 		killDatabase(cmd, cancelFunc)
 	}()
@@ -205,9 +204,9 @@ func main() {
 	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err))
+		fmt.Printf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err)
 	} else {
-		fmt.Println(fmt.Sprintf("Detected FalkorDB version %d\n", falkorDBVersion))
+		fmt.Printf("Detected FalkorDB version %d\n", falkorDBVersion)
 	}
 
 	for _, command := range yamlConfig.DBConfig.InitCommands {

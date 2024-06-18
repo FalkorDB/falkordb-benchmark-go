@@ -10,7 +10,6 @@ import (
 )
 
 func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile string, loadTimeout int) (graph *falkordb.Graph, conn *falkordb.FalkorDB) {
-
 	var err error
 	if tlsCaCertFile != "" {
 		// Load CA cert
