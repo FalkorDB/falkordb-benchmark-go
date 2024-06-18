@@ -72,14 +72,17 @@ func IsURL(str string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func RunFalkorDBDocker() error {
-	return nil
-}
-
-func RunFalkorDBProcess(timeout int) (cancel context.CancelFunc, cmd *exec.Cmd, err error) {
+func RunFalkorDBProcess(dockerImage string, timeout int, hasDataset bool) (cancel context.CancelFunc, cmd *exec.Cmd, err error) {
 	// Create the command with hardcoded arguments
 	ctx, cancel := context.WithCancel(context.Background())
-	cmd = exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
+
+	if hasDataset {
+		cmd = exec.CommandContext(ctx, "docker", "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-v", "./dataset.rdb:/data/dump.rdb", "-e", "FALKORDB_ARGS=TIMEOUT 0", dockerImage)
+	} else {
+		cmd = exec.CommandContext(ctx, "docker", "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-e", "FALKORDB_ARGS=TIMEOUT 0", dockerImage)
+
+	}
+	//cmd = exec.CommandContext(ctx, "redis-server", "--loadmodule", "./falkordb.so", "--dbfilename", "dataset.rdb")
 
 	// Create a pipe for the stdout of the command
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -127,19 +130,25 @@ func RunFalkorDBProcess(timeout int) (cancel context.CancelFunc, cmd *exec.Cmd, 
 	select {
 	case found := <-done:
 		if !found {
-			cancel()
-			cmd.Process.Kill()
-			cmd.Process.Wait()
+			killDatabase(cmd, cancel)
 			return
 		}
 		fmt.Println("Database accepting connections")
 	case <-time.After(time.Duration(timeout) * time.Second):
 		err = fmt.Errorf("timeout: substring not found within 10 seconds")
-		cancel()
-		cmd.Process.Kill()
-		cmd.Process.Wait()
+		killDatabase(cmd, cancel)
 		return
 	}
 
 	return
+}
+
+func killDatabase(cmd *exec.Cmd, cancel context.CancelFunc) {
+	fmt.Println("Ensuring FalkorDB is stopped") // Sounds like a threat
+
+	cancel()
+	cmd.Process.Kill()
+	cmd.Process.Wait()
+
+	exec.Command("docker", "rm", "-f", "falkordb").Run()
 }

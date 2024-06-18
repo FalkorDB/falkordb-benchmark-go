@@ -11,8 +11,13 @@ import (
 	"time"
 )
 
-func ingestionRoutine(rg *falkordb.Graph, continueOnError bool, cmdS []string, commandIsRO []bool, commandsCDF []float32, randomIntPadding, randomIntMax int64, numberSamples uint64, loop bool, verbose bool, wg *sync.WaitGroup, useLimiter bool, rateLimiter *rate.Limiter, statsChannel chan GraphQueryDatapoint, replacementEnabled bool, replacementArr []map[string]string, commandStartPos uint64) {
-	defer wg.Done()
+func ingestionRoutine(rg *falkordb.Graph, continueOnError bool, cmdS []string, commandIsRO []bool, commandsCDF []float32, randomIntPadding, randomIntMax int64, numberSamples uint64, loop bool, verbose bool, wg *sync.WaitGroup, useLimiter bool, rateLimiter *rate.Limiter, statsChannel chan GraphQueryDatapoint, replacementEnabled bool, replacementArr []map[string]string, commandStartPos uint64, panicChannel chan bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			panicChannel <- true
+		}
+		wg.Done()
+	}()
 	var replacementTerms map[string]string
 	for i := 0; uint64(i) < numberSamples || loop; i++ {
 		cmdPos := sample(commandsCDF)

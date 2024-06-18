@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/olekukonko/tablewriter"
+	"log"
 	"os"
 	"sync/atomic"
 	"time"
@@ -136,7 +137,7 @@ func renderGraphResultSetTable(queries []string, writer *os.File, tableTitle str
 	table.Render()
 }
 
-func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, messageLimit uint64, loop bool) bool {
+func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, messageLimit uint64, loop bool, panicChannel chan bool) bool {
 
 	start := startTime
 	prevTime := startTime
@@ -147,6 +148,10 @@ func updateCLI(startTime time.Time, tick *time.Ticker, c chan os.Signal, message
 	fmt.Printf("%26s %7s %25s %25s %7s %25s %25s %26s\n", "Test time", " ", "Total Commands", "Total Errors", "", "Command Rate", "Client p50 with RTT(ms)", "Graph Internal Time p50 (ms)")
 	for {
 		select {
+		case <-panicChannel:
+			{
+				log.Panic("Panic in worker routine, aborting")
+			}
 		case <-tick.C:
 			{
 				now := time.Now()

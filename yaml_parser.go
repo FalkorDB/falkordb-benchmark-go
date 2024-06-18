@@ -15,7 +15,7 @@ type Query struct {
 type YamlConfig struct {
 	Name            *string `yaml:"name"`
 	Description     string  `yaml:"description,omitempty"`
-	DockerImage     *string `yaml:"docker_image,omitempty"`
+	DockerImage     string  `yaml:"docker_image,omitempty"`
 	ContinueOnError bool    `yaml:"continue_on_error,omitempty"`
 	DBConfig        struct {
 		Host                   string     `yaml:"host,omitempty"`

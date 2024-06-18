@@ -91,16 +91,13 @@ func main() {
 		}
 	}
 
-	cancelFunc, cmd, err := RunFalkorDBProcess(yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
+	cancelFunc, cmd, err := RunFalkorDBProcess(yamlConfig.DockerImage, yamlConfig.DBConfig.DatasetLoadTimeoutSecs, yamlConfig.DBConfig.Dataset != nil)
 	if err != nil {
 		log.Panicf("Could not start Falkor in time, %s", err)
 	}
 
 	defer func() {
-		fmt.Println("Stopping FalkorDB")
-		cancelFunc()
-		cmd.Process.Kill()
-		cmd.Process.Wait()
+		killDatabase(cmd, cancelFunc)
 	}()
 
 	totalQueries := len(yamlConfig.Parameters.Queries) + len(yamlConfig.Parameters.RoQueries)
@@ -226,6 +223,9 @@ func main() {
 	dataPointProcessingWg.Add(1)
 	go processGraphDatapointsChannel(graphDatapointsChann, c1, yamlConfig.Parameters.NumRequests, &dataPointProcessingWg, &instantHistogramsResetMutex)
 
+	panicChannel := make(chan bool)
+	defer close(panicChannel)
+
 	// Total commands to be issue per client. Equal for all clients, except for the last one ( see comment bellow )
 	clientTotalCmds := samplesPerClient
 	startTime := time.Now()
@@ -243,11 +243,11 @@ func main() {
 			clientTotalCmds = samplesPerClientRemainder + samplesPerClient
 		}
 		cmdStartPos := uint64(clientId) * samplesPerClient
-		go ingestionRoutine(&graphs[clientId], yamlConfig.ContinueOnError, allQueries, queryIsRO, cdf, *yamlConfig.Parameters.RandomIntMin, randLimit, clientTotalCmds, *loop, *verbose, &wg, useRateLimiter, rateLimiter, graphDatapointsChann, dataReplacementEnabled, replacementArr, cmdStartPos)
+		go ingestionRoutine(&graphs[clientId], yamlConfig.ContinueOnError, allQueries, queryIsRO, cdf, *yamlConfig.Parameters.RandomIntMin, randLimit, clientTotalCmds, *loop, *verbose, &wg, useRateLimiter, rateLimiter, graphDatapointsChann, dataReplacementEnabled, replacementArr, cmdStartPos, panicChannel)
 	}
 
 	// enter the update loopUpdateCLIUpdateCLI
-	updateCLI(startTime, tick, c, yamlConfig.Parameters.NumRequests, *loop)
+	updateCLI(startTime, tick, c, yamlConfig.Parameters.NumRequests, *loop, panicChannel)
 
 	endTime := time.Now()
 	duration := time.Since(startTime)
