@@ -19,8 +19,8 @@ func printFinalSummary(queries []string, totalMessages uint64, duration time.Dur
 	fmt.Printf("Total Commands issued %d\n", totalCommands)
 	fmt.Printf("Total Errors %d ( %3.3f %%)\n", totalErrors, float64(totalErrors/totalCommands*100.0))
 	fmt.Printf("Throughput summary: %.0f requests per second\n", messageRate)
-	renderGraphResultSetTable(queries, writer, "## Overall RedisGraph resultset stats table\n")
-	renderGraphInternalExecutionTimeTable(queries, writer, "## Overall RedisGraph Internal Execution Time summary table\n", serverSidePerQueryGraphInternalTimeOverallLatencies, serverSideAllQueriesGraphInternalTimeOverallLatencies)
+	renderGraphResultSetTable(queries, writer, "## Overall FalkorDB resultset stats table\n")
+	renderGraphInternalExecutionTimeTable(queries, writer, "## Overall FalkorDB Internal Execution Time summary table\n", serverSidePerQueryGraphInternalTimeOverallLatencies, serverSideAllQueriesGraphInternalTimeOverallLatencies)
 	renderTable(queries, writer, "## Overall Client Latency summary table\n", true, true, errorsPerQuery, duration, clientSidePerQueryOverallLatencies, clientSideAllQueriesOverallLatencies)
 }
 

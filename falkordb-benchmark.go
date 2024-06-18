@@ -30,11 +30,11 @@ func printVersion(version bool) {
 
 func GetDBConfigsMap(version int64) map[string]interface{} {
 	dbConfigsMap := map[string]interface{}{}
-	dbConfigsMap["RedisGraphVersion"] = version
+	dbConfigsMap["FalkorDBVersion"] = version
 	return dbConfigsMap
 }
 
-// getRedisGraphVersion returns RedisGraph version by issuing "MODULE LIST" command
+// getFalkorDBVersion returns FalkorDB version by issuing "MODULE LIST" command
 // and iterating through the availabe modules up until "graph" is found as the name property
 func getFalkorDBVersion(falkorClient *falkordb.FalkorDB) (version int64, err error) {
 
