@@ -1,4 +1,4 @@
-module github.com/FalkorDB/falkordb-benchmark
+module github.com/FalkorDB/falkordb-benchmark-go
 
 go 1.21
 

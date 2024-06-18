@@ -26,7 +26,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          binary_name: "falkordb-benchmark"
+          binary_name: "falkordb-benchmark-go"
           sha256sum: true
-          asset_name: falkordb-benchmark-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_name: falkordb-benchmark-go-${{ matrix.goos }}-${{ matrix.goarch }}
           build_command: "make build"

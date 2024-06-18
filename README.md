@@ -9,7 +9,7 @@
 $ go build
 
 $ ./falkordb_benchmark -h
-Usage of ./falkordb-benchmark:
+Usage of ./falkordb-benchmark-go:
     -cli_update_tick int
         How often should the CLI stdout be updated (default 5)
     -data-import-terms string

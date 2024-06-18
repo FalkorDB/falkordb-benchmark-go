@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-falkordb-benchmark
+falkordb-benchmark-go
 dataset.rdb
 
 # Test binary, built with `go test -c`

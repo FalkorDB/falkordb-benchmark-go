@@ -21,7 +21,7 @@ func printVersion(version bool) {
 	if gitSha == "" {
 		gitSha = "UNKNOWN"
 	}
-	fmt.Printf("falkordb-benchmark (git_sha1:%s)\n", gitSha)
+	fmt.Printf("falkordb-benchmark-go (git_sha1:%s)\n", gitSha)
 	if version {
 		os.Exit(0)
 	}
