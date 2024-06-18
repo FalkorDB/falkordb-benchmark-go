@@ -69,7 +69,7 @@ func main() {
 
 	yamlConfig, err := parseYaml(*yamlConfigFile)
 	if err != nil {
-		log.Panicln(err)
+		log.Panicln(err.Error())
 		return
 	}
 
@@ -98,9 +98,9 @@ func main() {
 
 	defer func() {
 		fmt.Println("Stopping FalkorDB")
+		cancelFunc()
 		cmd.Process.Kill()
 		cmd.Process.Wait()
-		cancelFunc()
 	}()
 
 	totalQueries := len(yamlConfig.Parameters.Queries) + len(yamlConfig.Parameters.RoQueries)

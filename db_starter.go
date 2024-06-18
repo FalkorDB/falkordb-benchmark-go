@@ -119,9 +119,6 @@ func RunFalkorDBProcess(timeout int) (cancel context.CancelFunc, cmd *exec.Cmd, 
 			fmt.Println("Error reading stdout:", err)
 		}
 
-		cmd.Process.Kill()
-		cmd.Process.Wait()
-
 		errOut, _ := io.ReadAll(stderrPipe)
 		err = fmt.Errorf("process closed: %s", string(errOut))
 		done <- false

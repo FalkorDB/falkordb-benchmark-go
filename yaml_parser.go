@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
 )
@@ -46,13 +47,13 @@ func parseYaml(yamlFile string) (yamlConfig YamlConfig, err error) {
 
 	data, err := os.ReadFile(yamlFile)
 	if err != nil {
-		err = errors.New("YAML file does not exist")
+		err = fmt.Errorf("YAML file does not exist: %v", err)
 		return
 	}
 
 	err = yaml.Unmarshal(data, &yamlConfig)
 	if err != nil {
-		err = errors.New("could not parse YAML file")
+		err = fmt.Errorf("could not parse YAML file: %v", err)
 		return
 	}
 

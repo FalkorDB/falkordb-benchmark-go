@@ -157,12 +157,12 @@ func processGraphDatapointsChannel(graphStatsChann chan GraphQueryDatapoint, c c
 func saveJsonResult(testResult *TestResult, jsonOutputFile string) {
 	file, err := json.MarshalIndent(testResult, "", " ")
 	if err != nil {
-		log.Panicln(err)
+		log.Panicln(err.Error())
 	}
 	fmt.Printf("Saving JSON results file to %s\n", jsonOutputFile)
 	err = os.WriteFile(jsonOutputFile, file, 0644)
 	if err != nil {
-		log.Panicln(err)
+		log.Panicln(err.Error())
 	}
 }
 

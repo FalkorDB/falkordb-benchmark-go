@@ -16,7 +16,7 @@ func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile st
 		// Load CA cert
 		caCert, err := os.ReadFile(tlsCaCertFile)
 		if err != nil {
-			log.Panicln(err)
+			log.Panicln(err.Error())
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
