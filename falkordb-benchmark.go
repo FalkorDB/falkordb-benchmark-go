@@ -65,6 +65,7 @@ func main() {
 	dataImportFile := flag.String("data-import-terms", "", "Read field replacement data from file in csv format. each column should start and end with '__' chars. Example __field1__,__field2__.")
 	dataImportMode := flag.String("data-import-terms-mode", "seq", "Either 'seq' or 'rand'.")
 	jsonOutputFile := flag.String("output_file", "benchmark-results.json", "The name of the output file")
+	overrideImage := flag.String("override_image", "", "Override the docker image specified in the yaml file")
 	flag.Parse()
 
 	yamlConfig, err := parseYaml(*yamlConfigFile)
@@ -91,6 +92,9 @@ func main() {
 		}
 	}
 
+	if *overrideImage != "" {
+		yamlConfig.DockerImage = *overrideImage
+	}
 	cancelFunc, cmd, err := RunFalkorDBProcess(yamlConfig.DockerImage, yamlConfig.DBConfig.DatasetLoadTimeoutSecs, yamlConfig.DBConfig.Dataset != nil)
 	if err != nil {
 		log.Panicf("Could not start Falkor in time, %s", err)
