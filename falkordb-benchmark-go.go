@@ -65,6 +65,7 @@ func main() {
 	dataImportMode := flag.String("data-import-terms-mode", "seq", "Either 'seq' or 'rand'.")
 	jsonOutputFile := flag.String("output_file", "benchmark-results.json", "The name of the output file")
 	overrideImage := flag.String("override_image", "", "Override the docker image specified in the yaml file")
+	overrideModule := flag.String("override_module", "", "Override the database module specified in the yaml file")
 	flag.Parse()
 
 	printVersion(*version)
@@ -78,34 +79,29 @@ func main() {
 		yamlConfig.DockerImage = *overrideImage
 	}
 
-	if yamlConfig.DockerImage == "" {
-		log.Fatalln("Docker image not specified in the yaml file or as a command line argument.")
+	if *overrideModule != "" {
+		yamlConfig.DatabaseModule = *overrideModule
+	}
+
+	if yamlConfig.DockerImage == "" && yamlConfig.DatabaseModule == "" {
+		log.Fatalln("No database binary or docker image specified in the YAML file or CLI.")
 	}
 
 	fmt.Printf("Running in Verbose Mode: %t.\n", *verbose)
 
-	if yamlConfig.DBConfig.Dataset != nil {
-		if IsURL(*yamlConfig.DBConfig.Dataset) {
-			err = DownloadDataset(*yamlConfig.DBConfig.Dataset)
-			if err != nil {
-				log.Fatalln("Could not download dataset ", err)
-			}
-		} else {
-			err = CopyDataset(*yamlConfig.DBConfig.Dataset)
-			if err != nil {
-				log.Fatalln("Could not copy dataset ", err)
-			}
-		}
+	err = prepareDataset(yamlConfig.DBConfig.Dataset)
+	if err != nil {
+		log.Fatalf("Could not prepare dataset: %v", err)
 	}
 
-	cancelFunc, cmd, err := RunFalkorDBProcess(yamlConfig.DockerImage, yamlConfig.DBConfig.DatasetLoadTimeoutSecs, yamlConfig.DBConfig.Dataset != nil)
+	cancelFunc, cmd, isDocker, err := startDatabase(&yamlConfig)
 	if err != nil {
-		log.Fatalf("Could not start Falkor in time, %s", err)
+		log.Fatalf("Could not start FalkorDB: %v", err)
 	}
 
 	// From here on we can't use log.Fatal in all its forms, as it will not call defer functions
 	defer func() {
-		killDatabase(cmd, cancelFunc)
+		killDatabase(cmd, cancelFunc, isDocker)
 	}()
 
 	totalQueries := len(yamlConfig.Parameters.Queries) + len(yamlConfig.Parameters.RoQueries)
@@ -206,13 +202,17 @@ func main() {
 	c1 := make(chan os.Signal, 1)
 	signal.Notify(c1, os.Interrupt)
 
-	_, falkorConn := getStandaloneConn(nil, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
+	graph, falkorConn := getStandaloneConn(yamlConfig.Parameters.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
 		fmt.Printf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err)
 	} else {
 		fmt.Printf("Detected FalkorDB version %d\n", falkorDBVersion)
 	}
+
+	defer func() {
+		graph.Delete()
+	}()
 
 	for _, command := range yamlConfig.DBConfig.InitCommands {
 		interfaceArray := make([]interface{}, len(command))
@@ -240,7 +240,7 @@ func main() {
 	for clientId := 0; uint64(clientId) < yamlConfig.Parameters.NumClients; clientId++ {
 		wg.Add(1)
 
-		graphPtr, connsPtr := getStandaloneConn(&yamlConfig.Parameters.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, 5)
+		graphPtr, connsPtr := getStandaloneConn(yamlConfig.Parameters.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, 5)
 		graphs[clientId] = *graphPtr
 		conns[clientId] = *connsPtr
 
