@@ -1,177 +1,190 @@
-# redisgraph-benchmark-go
 
-[![license](https://img.shields.io/github/license/RedisGraph/redisgraph-benchmark-go.svg)](https://github.com/RedisGraph/redisgraph-benchmark-go)
-[![GitHub issues](https://img.shields.io/github/release/RedisGraph/redisgraph-benchmark-go.svg)](https://github.com/RedisGraph/redisgraph-benchmark-go/releases/latest)
-[![Discord](https://img.shields.io/discord/697882427875393627?style=flat-square)](https://discord.gg/gWBRT6P)
-[![codecov](https://codecov.io/github/RedisGraph/redisgraph-benchmark-go/branch/main/graph/badge.svg?token=B6ISQSDK3Y)](https://codecov.io/github/RedisGraph/redisgraph-benchmark-go)
+[![GitHub License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/FalkorDB/falkordb-benchmark-go/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/github/release/FalkorDB/falkordb-benchmark-go.svg)](https://github.com/FalkorDB/falkordb-benchmark-go/releases/latest)
+[![Forum](https://img.shields.io/badge/Forum-falkordb-blue)](https://github.com/orgs/FalkorDB/discussions)
+[![Discord](https://img.shields.io/discord/1146782921294884966?style=flat-square)](https://discord.gg/ErBEqN9E)
 
-## Overview
+# falkordb-benchmark-go
 
-This repo contains code to quick benchmark RedisGraph, using the official [redisgraph-go](https://github.com/RedisGraph/redisgraph-go) client.  
+[![Try Free](https://img.shields.io/badge/Try%20Free-FalkorDB%20Cloud-FF8101?labelColor=FDE900&style=for-the-badge&link=https://app.falkordb.cloud)](https://app.falkordb.cloud)
 
-## Installation
+### A FalkorDB benchmark utility
 
-### Download Standalone binaries ( no Golang needed )
-
-If you don't have go on your machine and just want to use the produced binaries you can download the following prebuilt bins:
-
-https://github.com/RedisGraph/redisgraph-benchmark-go/releases/latest
-
-| OS | Arch | Link |
-| :---         |     :---:      |          ---: |
-| Linux   | amd64  (64-bit X86)     | [redisgraph-benchmark-go-linux-amd64](https://github.com/RedisGraph/redisgraph-benchmark-go/releases/latest/download/redisgraph-benchmark-go-linux-amd64.tar.gz)    |
-| Linux   | arm64 (64-bit ARM)     | [redisgraph-benchmark-go-linux-arm64](https://github.com/RedisGraph/redisgraph-benchmark-go/releases/latest/download/redisgraph-benchmark-go-linux-arm64.tar.gz)    |
-| Darwin   | amd64  (64-bit X86)     | [redisgraph-benchmark-go-darwin-amd64](https://github.com/RedisGraph/redisgraph-benchmark-go/releases/latest/download/redisgraph-benchmark-go-darwin-amd64.tar.gz)    |
-| Darwin   | arm64 (64-bit ARM)     | [redisgraph-benchmark-go-darwin-arm64](https://github.com/RedisGraph/redisgraph-benchmark-go/releases/latest/download/redisgraph-benchmark-go-darwin-arm64.tar.gz)    |
-
-Here's how bash script to download and try it:
+## Usage
 
 ```bash
-wget -c https://github.com/RedisGraph/redisgraph-benchmark-go/releases/latest/download/redisgraph-benchmark-go-$(uname -mrs | awk '{ print tolower($1) }')-$(dpkg --print-architecture).tar.gz -O - | tar -xz
+$ go build
 
-# give it a try
-./redisgraph-benchmark-go --help
-```
-
-
-### Installation in a Golang env
-
-To install the benchmark utility with a Go Env do as follow:
-
-`go get` and then `go install`:
-```bash
-# Fetch this repo
-go get github.com/RedisGraph/redisgraph-benchmark-go
-cd $GOPATH/src/github.com/RedisGraph/redisgraph-benchmark-go
-make
-```
-
-## Usage of redisgraph-benchmark-go
-
-```
-$ $ ./redisgraph-benchmark-go --help
-Usage of ./redisgraph-benchmark-go:
-  -a string
-        Password for Redis Auth.
-  -c uint
-        number of clients. (default 50)
-  -continue-on-error
-        Continue benchmark in case of error replies.
-  -debug int
-        Client debug level.
-  -enable-exporter-rps
-        Push results to redistimeseries exporter in real-time. Time granularity is set via the -reporting-period parameter.
-  -exporter-rts-auth string
-        RedisTimeSeries Password for Redis Auth.
-  -exporter-rts-host string
-        RedisTimeSeries hostname. (default "127.0.0.1")
-  -exporter-rts-port int
-        RedisTimeSeries port. (default 6379)
-  -exporter-run-name string
-        Run name. (default "perf-run")
-  -graph-key string
-        graph key. (default "graph")
-  -h string
-        Server hostname. (default "127.0.0.1")
-  -json-out-file string
-        Name of json output file to output benchmark results. If not set, will not print to json. (default "benchmark-results.json")
-  -n uint
-        Total number of requests (default 1000000)
-  -p int
-        Server port. (default 6379)
-  -query value
-        Specify a RedisGraph query to send in quotes. Each command that you specify is run with its ratio. For example: -query="CREATE (n)" -query-ratio=1
-  -query-ratio value
-        The query ratio vs other queries used in the same benchmark. Each command that you specify is run with its ratio. For example: -query="CREATE (n)" -query-ratio=0.5 -query="MATCH (n) RETURN n" -query-ratio=0.5
-  -query-ro value
-        Specify a RedisGraph read-only query to send in quotes. You can run multiple commands (both read/write) on the same benchmark. Each command that you specify is run with its ratio. For example: -query="CREATE (n)" -query-ratio=0.5 -query-ro="MATCH (n) RETURN n" -query-ratio=0.5
-  -random-int-max int
-        __rand_int__ upper value limit. __rand_int__ distribution is uniform Random (default 1000000)
-  -random-int-min int
-        __rand_int__ lower value limit. __rand_int__ distribution is uniform Random (default 1)
-  -random-seed int
-        Random seed to use. (default 12345)
-  -reporting-period duration
-        Period to report stats. (default 10s)
-  -rps int
-        Max rps. If 0 no limit is applied and the DB is stressed up to maximum.
-  -v    Output version and exit
-```
-
-## Sample output - 100K write commands
+$ ./falkordb_benchmark -h
+Usage of ./falkordb-benchmark-go:
+    --cli_update_tick int
+        How often should the CLI stdout be updated (default 5)
+    --data-import-terms string
+        Read field replacement data from file in csv format. each column should start and end with '__' chars. Example __field1__,__field2__.
+    --data-import-terms-mode string
+        Either 'seq' or 'rand'. (default "seq")
+    --loop
+        Run this benchmark in a loop until interrupted
+    --output_file string
+        The name of the output file (default "benchmark-results.json")
+    --override_image string
+        Override the docker image specified in the yaml file
+    -v    
+        Output version and exit
+    --verbose
+        Client verbosity level.
+    --yaml_config string
+        A .yaml file containing the configuration for this benchmark
 
 ```
-$ redisgraph-benchmark-go -n 100000 -graph-key graph -query "CREATE (u:User)" 
-2021/07/12 11:44:13 redisgraph-benchmark-go (git_sha1:)
-2021/07/12 11:44:13 RTS export disabled.
-2021/07/12 11:44:13 Debug level: 0.
-2021/07/12 11:44:13 Using random seed: 12345.
-2021/07/12 11:44:13 Total clients: 50. Commands per client: 2000 Total commands: 100000
-2021/07/12 11:44:13 Trying to extract RedisGraph version info
-2021/07/12 11:44:13 Detected RedisGraph version 999999
 
-                 Test time                    Total Commands              Total Errors                      Command Rate   Client p50 with RTT(ms) Graph Internal Time p50 (ms)
-                       10s [100.0%]                    100000                         0 [0.0%]                   9997.46               2.698 (2.698)                2.589 (2.589)       
-################# RUNTIME STATS #################
-Total Duration 10.004 Seconds
-Total Commands issued 100000
-Total Errors 0 ( 0.000 %)
-Throughput summary: 9996 requests per second
-## Overall RedisGraph resultset stats table
-|      QUERY      | NODES CREATED | NODES DELETED | LABELS ADDED | PROPERTIES SET | RELATIONSHIPS CREATED  | RELATIONSHIPS DELETED  |
-|-----------------|---------------|---------------|--------------|----------------|------------------------|------------------------|
-| CREATE (u:User) |        100000 |             0 |            0 |              0 |                      0 |                      0 |
-| Total           |        100000 |             0 |            0 |              0 |                      0 |                      0 |
-## Overall RedisGraph Internal Execution Time summary table
-|      QUERY      | INTERNAL AVG  LATENCY(MS)  | INTERNAL P50 LATENCY(MS) | INTERNAL P95 LATENCY(MS) | INTERNAL P99 LATENCY(MS) |
-|-----------------|----------------------------|--------------------------|--------------------------|--------------------------|
-| CREATE (u:User) |                      2.599 |                    2.589 |                    2.912 |                    3.648 |
-| Total           |                      2.599 |                    2.589 |                    2.912 |                    3.648 |
-## Overall Client Latency summary table
-|      QUERY      | OPS/SEC | TOTAL CALLS | TOTAL ERRORS | AVG  LATENCY(MS) | P50 LATENCY(MS) | P95 LATENCY(MS) | P99 LATENCY(MS) |
-|-----------------|---------|-------------|--------------|------------------|-----------------|-----------------|-----------------|
-| CREATE (u:User) |    9996 |      100000 |            0 |            2.745 |           2.698 |           3.048 |           4.007 |
-| Total           |    9996 |      100000 |            0 |            2.745 |           2.698 |           3.048 |           4.007 |
-2021/07/12 11:44:23 Saving JSON results file to benchmark-results.json
+## Configuration
+
+A configuration file is required to run the benchmark. The configuration file is a YAML file with the following structure:
+
+```yaml
+name: "Benchmark Name"
+description: "This is a quick description of the benchmark"
+docker_image: falkordb/falkordb:latest
+continue_on_error: false                # In case we want to test error rates etc.
+db_config:
+  host: 'localhost'                     # Default is `localhost`
+  port: 6379                            # Default is 6379
+  password: ''                          # Default is empty
+  tls_ca_cert_file: ''                  # Default is empty
+  dataset: <DATASET_URL>                # Can be a local path, or an http(s) URL, default is empty
+  dataset_load_timeout_secs: 180        # Time to wait for the database to start when using a dataset, default is 180
+  graph: 'graph_key'                    # Default is `graph`
+parameters:
+  num_clients: 32                       # Num of concurrent clients used to benchmark, default is 50
+  num_requests: 10000                   # Total number of requests to be made, default is 1,000,000
+  requests_per_second: 0                # If set to 0, all requests will be made without delay, default is 0
+  queries:                              # Mandatory if no ro_queries were provided
+    - query: 'CYPHER Id1=__rand_int__ MATCH (n)-[:IS_CONNECTED*3]->(z) WHERE ID(n) =
+        $Id1 RETURN ID(n), count(z) '
+      ratio: 0.75                       # 75% of queries will be this one
+    - query: 'CYPHER Id1=__rand_int__ Id2=__rand_int__ MATCH (n1:Node {external_id:$Id1})
+        MATCH (n2:Node {external_id: $Id2}) MERGE (n1)-[rel:IS_CONNECTED]->(n2)'
+      ratio: 0.25                       # The other 25% of queries will be this one
+  ro_queries:                           # Mandatory if no queries were provided
+    - query: 'CYPHER Id1=__rand_int__ MATCH (n)-[:IS_CONNECTED*3]->(z) WHERE ID(n) =
+        $Id1 RETURN ID(n), count(z) '
+      ratio: 0.75                       # 75% of queries will be this one
+    - query: 'CYPHER Id1=__rand_int__ Id2=__rand_int__ MATCH (n1:Node {external_id:$Id1})
+        MATCH (n2:Node {external_id: $Id2}) MERGE (n1)-[rel:IS_CONNECTED]->(n2)'
+      ratio: 0.25                       # The other 25% of queries will be this one
+  random_int_min: 0                     # Default is 1
+  random_int_max: 262016                # Default is 1000000
+  random_seed: 12345                    # Default is 12345
 ```
 
+## Output
 
-## Sample output - running mixed read and writes benchmark
+During this benchmark, the client will output the progress of the benchmark to the console. The output will be updated every 5 seconds by default.
 
-```
-$ redisgraph-benchmark-go -n 100000 -graph-key graph -query "CREATE (u:User)" -query-ratio 0.5 -query-ro "MATCH (n) return COUNT(n)" -query-ratio 0.5
-2021/07/12 11:45:38 redisgraph-benchmark-go (git_sha1:)
-2021/07/12 11:45:38 RTS export disabled.
-2021/07/12 11:45:38 Debug level: 0.
-2021/07/12 11:45:38 Using random seed: 12345.
-2021/07/12 11:45:38 Total clients: 50. Commands per client: 2000 Total commands: 100000
-2021/07/12 11:45:38 Trying to extract RedisGraph version info
-2021/07/12 11:45:38 Detected RedisGraph version 999999
+Once done, the output JSON file will look something like this:
 
-                 Test time                    Total Commands              Total Errors                      Command Rate   Client p50 with RTT(ms) Graph Internal Time p50 (ms)
-                       10s [100.0%]                    100000                         0 [0.0%]                   9996.09               1.179 (1.179)                0.155 (0.155)       
-################# RUNTIME STATS #################
-Total Duration 10.004 Seconds
-Total Commands issued 100000
-Total Errors 0 ( 0.000 %)
-Throughput summary: 9996 requests per second
-## Overall RedisGraph resultset stats table
-|           QUERY           | NODES CREATED | NODES DELETED | LABELS ADDED | PROPERTIES SET | RELATIONSHIPS CREATED  | RELATIONSHIPS DELETED  |
-|---------------------------|---------------|---------------|--------------|----------------|------------------------|------------------------|
-| CREATE (u:User)           |         49921 |             0 |            0 |              0 |                      0 |                      0 |
-| MATCH (n) return COUNT(n) |             0 |             0 |            0 |              0 |                      0 |                      0 |
-| Total                     |         49921 |             0 |            0 |              0 |                      0 |                      0 |
-## Overall RedisGraph Internal Execution Time summary table
-|           QUERY           | INTERNAL AVG  LATENCY(MS)  | INTERNAL P50 LATENCY(MS) | INTERNAL P95 LATENCY(MS) | INTERNAL P99 LATENCY(MS) |
-|---------------------------|----------------------------|--------------------------|--------------------------|--------------------------|
-| CREATE (u:User)           |                      3.825 |                    3.913 |                    4.639 |                    5.249 |
-| MATCH (n) return COUNT(n) |                      0.050 |                    0.048 |                    0.067 |                    0.100 |
-| Total                     |                      1.935 |                    0.155 |                    4.442 |                    4.929 |
-## Overall Client Latency summary table
-|           QUERY           | OPS/SEC | TOTAL CALLS | TOTAL ERRORS | AVG  LATENCY(MS) | P50 LATENCY(MS) | P95 LATENCY(MS) | P99 LATENCY(MS) |
-|---------------------------|---------|-------------|--------------|------------------|-----------------|-----------------|-----------------|
-| CREATE (u:User)           |    4990 |       49921 |            0 |            4.041 |           4.061 |           4.843 |           5.930 |
-| MATCH (n) return COUNT(n) |    5006 |       50079 |            0 |            0.236 |           0.178 |           0.442 |           1.201 |
-| Total                     |    9996 |      100000 |            0 |            2.135 |           1.179 |           4.611 |           5.287 |
-2021/07/12 11:45:48 Saving JSON results file to benchmark-results.json
+```json
+{
+  "ResultFormatVersion": "0.0.1",
+  "Metadata": "",
+  "Clients": 1,
+  "MaxRps": 0,
+  "RandomSeed": 12345,
+  "BenchmarkConfiguredCommandsLimit": 500,
+  "IssuedCommands": 500,
+  "BenchmarkFullyRun": true,
+  "TestDescription": "",
+  "DBSpecificConfigs": {
+    "FalkorDBVersion": 40010
+  },
+  "StartTime": 1718711683987,
+  "EndTime": 1718711688991,
+  "DurationMillis": 5003,
+  "Totals": {
+    "MATCH (n:N {v: floor(rand()*100001)}) DELETE n RETURN 1 LIMIT 1": {
+      "Errors": 0,
+      "IssuedQueries": 500,
+      "LabelsAdded": 0,
+      "NodesCreated": 0,
+      "NodesDeleted": 499,
+      "PropertiesSet": 0,
+      "RelationshipsCreated": 0,
+      "RelationshipsDeleted": 1497
+    },
+    "Total": {
+      "Errors": 0,
+      "IssuedQueries": 500,
+      "LabelsAdded": 0,
+      "NodesCreated": 0,
+      "NodesDeleted": 499,
+      "PropertiesSet": 0,
+      "RelationshipsCreated": 0,
+      "RelationshipsDeleted": 1497
+    }
+  },
+  "OverallQueryRates": {
+    "MATCH (n:N {v: floor(rand()*100001)}) DELETE n RETURN 1 LIMIT 1": 99.92056447019763,
+    "Total": 99.92056447019763
+  },
+  "OverallClientLatencies": {
+    "MATCH (n:N {v: floor(rand()*100001)}) DELETE n RETURN 1 LIMIT 1": {
+      "avg": 0.480322,
+      "q0": 0,
+      "q100": 36.789,
+      "q50": 0.404,
+      "q95": 0.591,
+      "q99": 0.798,
+      "q999": 36.789
+    },
+    "Total": {
+      "avg": 0.480322,
+      "q0": 0,
+      "q100": 36.789,
+      "q50": 0.404,
+      "q95": 0.591,
+      "q99": 0.798,
+      "q999": 36.789
+    }
+  },
+  "OverallGraphInternalLatencies": {
+    "MATCH (n:N {v: floor(rand()*100001)}) DELETE n RETURN 1 LIMIT 1": {
+      "avg": 0.314198,
+      "q0": 0,
+      "q100": 36.205,
+      "q50": 0.24,
+      "q95": 0.333,
+      "q99": 0.446,
+      "q999": 36.205
+    },
+    "Total": {
+      "avg": 0.314198,
+      "q0": 0,
+      "q100": 36.205,
+      "q50": 0.24,
+      "q95": 0.333,
+      "q99": 0.446,
+      "q999": 36.205
+    }
+  },
+  "OverallRelativeInternalExternalLatencyDiff": {
+    "avg": 1.5287239256774392,
+    "q100": 1.0161303687336005,
+    "q50": 1.6833333333333336,
+    "q95": 1.7747747747747746,
+    "q99": 1.789237668161435,
+    "q999": 1.0161303687336005
+  },
+  "OverallAbsoluteInternalExternalLatencyDiff": {
+    "avg": 0.16612400000000005,
+    "q0": 0,
+    "q100": 0.5840000000000032,
+    "q50": 0.16400000000000003,
+    "q95": 0.25799999999999995,
+    "q99": 0.35200000000000004,
+    "q999": 0.5840000000000032
+  },
+  "ClientRunTimeStats": null,
+  "ServerRunTimeStats": null
+}
 ```

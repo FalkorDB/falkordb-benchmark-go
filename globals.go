@@ -26,23 +26,19 @@ var totalPropertiesSetPerQuery []uint64
 var totalRelationshipsCreatedPerQuery []uint64
 var totalRelationshipsDeletedPerQuery []uint64
 
-var randIntPlaceholder string = "__rand_int__"
+var randIntPlaceholder = "__rand_int__"
 
 // no locking is required when using the histograms. data is duplicated on the instant and overall histograms
-var clientSide_AllQueries_OverallLatencies *hdrhistogram.Histogram
-var serverSide_AllQueries_GraphInternalTime_OverallLatencies *hdrhistogram.Histogram
+var clientSideAllQueriesOverallLatencies *hdrhistogram.Histogram
+var serverSideAllQueriesGraphInternalTimeOverallLatencies *hdrhistogram.Histogram
 
-var clientSide_PerQuery_OverallLatencies []*hdrhistogram.Histogram
-var serverSide_PerQuery_GraphInternalTime_OverallLatencies []*hdrhistogram.Histogram
+var clientSidePerQueryOverallLatencies []*hdrhistogram.Histogram
+var serverSidePerQueryGraphInternalTimeOverallLatencies []*hdrhistogram.Histogram
 
-// this mutex does not affect any of the client go-routines ( it's only to sync between main thread and datapoints processer go-routines )
+// this mutex does not affect any of the client go-routines ( it's only to sync between main thread and datapoints processor go-routines )
 var instantHistogramsResetMutex sync.Mutex
-var clientSide_AllQueries_InstantLatencies *hdrhistogram.Histogram
-var serverSide_AllQueries_GraphInternalTime_InstantLatencies *hdrhistogram.Histogram
-
-var benchmarkQueries arrayStringParameters
-var benchmarkQueriesRO arrayStringParameters
-var benchmarkQueryRates arrayStringParameters
+var clientSideAllQueriesInstantLatencies *hdrhistogram.Histogram
+var serverSideAllQueriesGraphInternalTimeInstantLatencies *hdrhistogram.Histogram
 
 const Inf = rate.Limit(math.MaxFloat64)
 
@@ -55,22 +51,22 @@ func createRequiredGlobalStructs(totalDifferentCommands int) {
 	totalRelationshipsCreatedPerQuery = make([]uint64, totalDifferentCommands)
 	totalRelationshipsDeletedPerQuery = make([]uint64, totalDifferentCommands)
 
-	clientSide_AllQueries_OverallLatencies = hdrhistogram.New(1, 90000000000, 4)
-	clientSide_AllQueries_InstantLatencies = hdrhistogram.New(1, 90000000000, 4)
-	serverSide_AllQueries_GraphInternalTime_OverallLatencies = hdrhistogram.New(1, 90000000000, 4)
-	serverSide_AllQueries_GraphInternalTime_InstantLatencies = hdrhistogram.New(1, 90000000000, 4)
+	clientSideAllQueriesOverallLatencies = hdrhistogram.New(1, 90000000000, 4)
+	clientSideAllQueriesInstantLatencies = hdrhistogram.New(1, 90000000000, 4)
+	serverSideAllQueriesGraphInternalTimeOverallLatencies = hdrhistogram.New(1, 90000000000, 4)
+	serverSideAllQueriesGraphInternalTimeInstantLatencies = hdrhistogram.New(1, 90000000000, 4)
 
-	clientSide_PerQuery_OverallLatencies = make([]*hdrhistogram.Histogram, totalDifferentCommands)
-	serverSide_PerQuery_GraphInternalTime_OverallLatencies = make([]*hdrhistogram.Histogram, totalDifferentCommands)
+	clientSidePerQueryOverallLatencies = make([]*hdrhistogram.Histogram, totalDifferentCommands)
+	serverSidePerQueryGraphInternalTimeOverallLatencies = make([]*hdrhistogram.Histogram, totalDifferentCommands)
 	for i := 0; i < totalDifferentCommands; i++ {
-		clientSide_PerQuery_OverallLatencies[i] = hdrhistogram.New(1, 90000000000, 4)
-		serverSide_PerQuery_GraphInternalTime_OverallLatencies[i] = hdrhistogram.New(1, 90000000000, 4)
+		clientSidePerQueryOverallLatencies[i] = hdrhistogram.New(1, 90000000000, 4)
+		serverSidePerQueryGraphInternalTimeOverallLatencies[i] = hdrhistogram.New(1, 90000000000, 4)
 	}
 }
 
 func resetInstantHistograms() {
 	instantHistogramsResetMutex.Lock()
-	clientSide_AllQueries_InstantLatencies.Reset()
-	serverSide_AllQueries_GraphInternalTime_InstantLatencies.Reset()
+	clientSideAllQueriesInstantLatencies.Reset()
+	serverSideAllQueriesGraphInternalTimeInstantLatencies.Reset()
 	instantHistogramsResetMutex.Unlock()
 }

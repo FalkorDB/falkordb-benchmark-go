@@ -19,13 +19,14 @@ jobs:
         goos: [linux, darwin]
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v3
-      - uses: wangyoucao577/go-release-action@v1.36
+      - uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1
         with:
+          ldflags: "-X main.GitSHA1=${{ github.sha }}"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          binary_name: "redisgraph-benchmark-go"
+          binary_name: "falkordb-benchmark-go"
           sha256sum: true
-          asset_name: redisgraph-benchmark-go-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_name: falkordb-benchmark-go-${{ matrix.goos }}-${{ matrix.goarch }}
           build_command: "make build"
