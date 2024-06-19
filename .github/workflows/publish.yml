@@ -29,3 +29,4 @@ jobs:
           binary_name: "falkordb-benchmark-go"
           sha256sum: true
           asset_name: falkordb-benchmark-go-${{ matrix.goos }}-${{ matrix.goarch }}
+          extra_files: LICENSE README.md
