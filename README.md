@@ -1,5 +1,12 @@
 
+[![GitHub License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/FalkorDB/falkordb-benchmark-go/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/github/release/FalkorDB/falkordb-benchmark-go.svg)](https://github.com/FalkorDB/falkordb-benchmark-go/releases/latest)
+[![Forum](https://img.shields.io/badge/Forum-falkordb-blue)](https://github.com/orgs/FalkorDB/discussions)
+[![Discord](https://img.shields.io/discord/1146782921294884966?style=flat-square)](https://discord.gg/ErBEqN9E)
+
 # falkordb-benchmark-go
+
+[![Try Free](https://img.shields.io/badge/Try%20Free-FalkorDB%20Cloud-FF8101?labelColor=FDE900&style=for-the-badge&link=https://app.falkordb.cloud)](https://app.falkordb.cloud)
 
 ### A FalkorDB benchmark utility
 
@@ -10,23 +17,23 @@ $ go build
 
 $ ./falkordb_benchmark -h
 Usage of ./falkordb-benchmark-go:
-    -cli_update_tick int
+    --cli_update_tick int
         How often should the CLI stdout be updated (default 5)
-    -data-import-terms string
+    --data-import-terms string
         Read field replacement data from file in csv format. each column should start and end with '__' chars. Example __field1__,__field2__.
-    -data-import-terms-mode string
+    --data-import-terms-mode string
         Either 'seq' or 'rand'. (default "seq")
-    -loop
+    --loop
         Run this benchmark in a loop until interrupted
-    -output_file string
+    --output_file string
         The name of the output file (default "benchmark-results.json")
-    -override_image string
+    --override_image string
         Override the docker image specified in the yaml file
     -v    
         Output version and exit
-    -verbose
+    --verbose
         Client verbosity level.
-    -yaml_config string
+    --yaml_config string
         A .yaml file containing the configuration for this benchmark
 
 ```
