@@ -20,7 +20,6 @@ type YamlConfig struct {
 	DBConfig        struct {
 		Host                   string     `yaml:"host,omitempty"`
 		Port                   int        `yaml:"port,omitempty"`
-		Graph                  string     `yaml:"graph"`
 		InitCommands           [][]string `yaml:"init_commands,flow,omitempty"`
 		Dataset                *string    `yaml:"dataset,omitempty"`
 		DatasetLoadTimeoutSecs int        `yaml:"dataset_load_timeout_secs,omitempty"`
@@ -28,6 +27,7 @@ type YamlConfig struct {
 		TlsCaCertFile          string     `yaml:"tls_ca_cert_file,omitempty"`
 	} `yaml:"db_config"`
 	Parameters struct {
+		Graph             string  `yaml:"graph"`
 		NumClients        uint64  `yaml:"num_clients"`
 		NumRequests       uint64  `yaml:"num_requests"`
 		RequestsPerSecond uint64  `yaml:"rps,omitempty"`
@@ -74,8 +74,8 @@ func parseYaml(yamlFile string) (yamlConfig YamlConfig, err error) {
 		yamlConfig.DBConfig.Port = 6379
 	}
 
-	if yamlConfig.DBConfig.Graph == "" {
-		yamlConfig.DBConfig.Graph = "graph"
+	if yamlConfig.Parameters.Graph == "" {
+		yamlConfig.Parameters.Graph = "graph"
 	}
 
 	if yamlConfig.Parameters.NumClients == 0 {

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile string, loadTimeout int) (graph *falkordb.Graph, conn *falkordb.FalkorDB) {
+func getStandaloneConn(graphName *string, addr string, password string, tlsCaCertFile string, loadTimeout int) (graph *falkordb.Graph, conn *falkordb.FalkorDB) {
 	var err error
 	if tlsCaCertFile != "" {
 		// Load CA cert
@@ -62,8 +62,8 @@ func getStandaloneConn(graphName, addr string, password string, tlsCaCertFile st
 	if err != nil {
 		log.Panicf("Error preparing for benchmark, while creating new connection. error = %v", err)
 	}
-	if conn != nil {
-		graph = conn.SelectGraph(graphName)
+	if conn != nil && graphName != nil {
+		graph = conn.SelectGraph(*graphName)
 	}
 	return graph, conn
 }

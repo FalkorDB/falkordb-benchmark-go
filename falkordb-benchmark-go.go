@@ -206,7 +206,7 @@ func main() {
 	c1 := make(chan os.Signal, 1)
 	signal.Notify(c1, os.Interrupt)
 
-	_, falkorConn := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
+	_, falkorConn := getStandaloneConn(nil, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, yamlConfig.DBConfig.DatasetLoadTimeoutSecs)
 	falkorDBVersion, err := getFalkorDBVersion(falkorConn)
 	if err != nil {
 		fmt.Printf("Unable to retrieve FalkorDB version. Continuing anayway. Error: %v\n", err)
@@ -240,7 +240,7 @@ func main() {
 	for clientId := 0; uint64(clientId) < yamlConfig.Parameters.NumClients; clientId++ {
 		wg.Add(1)
 
-		graphPtr, connsPtr := getStandaloneConn(yamlConfig.DBConfig.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, 5)
+		graphPtr, connsPtr := getStandaloneConn(&yamlConfig.Parameters.Graph, connectionStr, yamlConfig.DBConfig.Password, yamlConfig.DBConfig.TlsCaCertFile, 5)
 		graphs[clientId] = *graphPtr
 		conns[clientId] = *connsPtr
 
