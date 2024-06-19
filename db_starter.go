@@ -76,11 +76,14 @@ func RunFalkorDBProcess(dockerImage string, timeout int, hasDataset bool) (cance
 	// Create the command with hardcoded arguments
 	ctx, cancel := context.WithCancel(context.Background())
 
+	args := make([]string, 0, 11)
+	args = append(args, "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-e", "FALKORDB_ARGS=TIMEOUT 0")
 	if hasDataset {
-		cmd = exec.CommandContext(ctx, "docker", "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-v", "./dataset.rdb:/data/dump.rdb", "-e", "FALKORDB_ARGS=TIMEOUT 0", dockerImage)
-	} else {
-		cmd = exec.CommandContext(ctx, "docker", "run", "--rm", "-i", "-p", "6379:6379", "--name", "falkordb", "-e", "FALKORDB_ARGS=TIMEOUT 0", dockerImage)
+		args = append(args, "-v", "./dataset.rdb:/data/dump.rdb")
 	}
+	args = append(args, dockerImage)
+
+	cmd = exec.CommandContext(ctx, "docker", args...)
 
 	// Create a pipe for the stdout of the command
 	stdoutPipe, err := cmd.StdoutPipe()
