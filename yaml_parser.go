@@ -58,6 +58,11 @@ func parseYaml(yamlFile string) (yamlConfig YamlConfig, err error) {
 		return
 	}
 
+	if yamlConfig.Name == nil {
+		err = fmt.Errorf("name is required")
+		return
+	}
+
 	if yamlConfig.Parameters.Queries == nil && yamlConfig.Parameters.RoQueries == nil {
 		err = errors.New("no queries were provided")
 		return

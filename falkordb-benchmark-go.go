@@ -75,6 +75,8 @@ func main() {
 		log.Fatalf("Failed to parse YAML configuration: %v", err)
 	}
 
+	fmt.Printf("Running benchmark '%s'\n", *yamlConfig.Name)
+
 	if *overrideImage != "" {
 		yamlConfig.DockerImage = *overrideImage
 	}
