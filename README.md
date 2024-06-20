@@ -45,7 +45,8 @@ A configuration file is required to run the benchmark. The configuration file is
 ```yaml
 name: "Benchmark Name"
 description: "This is a quick description of the benchmark"
-docker_image: falkordb/falkordb:latest
+docker_image: falkordb/falkordb:latest  # Default is empty, Optional if database_module is provided
+database_module: ../falkordb.so         # Default is empty, Optional if docker_image is provided, if it exists as well as the docker image, database_module will be copied and mounted into the container
 continue_on_error: false                # In case we want to test error rates etc.
 db_config:
   host: 'localhost'                     # Default is `localhost`
@@ -54,8 +55,8 @@ db_config:
   tls_ca_cert_file: ''                  # Default is empty
   dataset: <DATASET_URL>                # Can be a local path, or an http(s) URL, default is empty
   dataset_load_timeout_secs: 180        # Time to wait for the database to start when using a dataset, default is 180
-  graph: 'graph_key'                    # Default is `graph`
 parameters:
+  graph: 'graph_key'                    # Default is `graph`
   num_clients: 32                       # Num of concurrent clients used to benchmark, default is 50
   num_requests: 10000                   # Total number of requests to be made, default is 1,000,000
   requests_per_second: 0                # If set to 0, all requests will be made without delay, default is 0

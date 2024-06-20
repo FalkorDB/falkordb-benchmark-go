@@ -16,6 +16,7 @@ type YamlConfig struct {
 	Name            *string `yaml:"name"`
 	Description     string  `yaml:"description,omitempty"`
 	DockerImage     string  `yaml:"docker_image,omitempty"`
+	DatabaseModule  string  `yaml:"database_module,omitempty"`
 	ContinueOnError bool    `yaml:"continue_on_error,omitempty"`
 	DBConfig        struct {
 		Host                   string     `yaml:"host,omitempty"`
@@ -54,6 +55,11 @@ func parseYaml(yamlFile string) (yamlConfig YamlConfig, err error) {
 	err = yaml.Unmarshal(data, &yamlConfig)
 	if err != nil {
 		err = fmt.Errorf("could not parse YAML file: %v", err)
+		return
+	}
+
+	if yamlConfig.Name == nil {
+		err = fmt.Errorf("name is required")
 		return
 	}
 
